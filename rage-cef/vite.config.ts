@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         // list the .html files that the rage-client is going to use
         helloWorld: resolve(__dirname, 'src/modules/hello-world/index.html'),
+        progressBar: resolve(__dirname, 'src/modules/progress-bar/index.html'),
       },
     },
     outDir: '../dist/client_packages/cef',
