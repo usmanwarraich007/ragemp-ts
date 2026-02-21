@@ -1,24 +1,19 @@
-/**
- * Shared RPC type contracts.
- *
- * Add your procedures here as the project grows.
- * Both rage-cef and rage-server-client import from this file.
- *
- * Format:
- *   'event:name': (arg1: Type, arg2: Type) => ReturnType
- */
+import type { AuthResult, CharacterSummary } from './types/auth';
 
 // Server-side procedures (CEF/Client → Server)
 export interface ServerRPCs {
-  // Teleport to waypoint — called by client after reading blip coords
+  // Teleport
   'tpm:teleport': (x: number, y: number, z: number) => void;
-  // Example:
-  // 'auth:login': (username: string, password: string) => { success: boolean; token?: string };
-  // 'inventory:getItems': () => { id: number; name: string }[];
+
+  // Auth
+  'auth:login':    (username: string, password: string) => AuthResult;
+  'auth:register': (username: string, password: string) => AuthResult;
+
+  // Character
+  'character:getList': () => CharacterSummary[];
+  'character:create':  (firstName: string, lastName: string, gender: 'male' | 'female') => CharacterSummary;
+  'character:select':  (characterId: number) => AuthResult;
 }
 
 // Client/CEF-side procedures (Server → CEF)
-export interface ClientRPCs {
-  // Example:
-  // 'ui:confirmDialog': (question: string) => boolean;
-}
+export interface ClientRPCs {}

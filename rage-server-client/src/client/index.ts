@@ -5,14 +5,24 @@ import './rpc/RpcBridge';
 import { browserManager } from './browser';
 import { clientRpc } from './rpc/clientRpc';
 
+// ── Page relay — server drives CEF page transitions ──────────────────────────
+mp.events.add('cmd:showPage', (page: string) => {
+  browserManager.show(page);
+});
 
-// CEF URL:
-// - In-game (production build): 'package://cef/index.html'
-// - Local dev (Vite):           'http://localhost:5173'
+mp.events.add('cmd:hidePage', () => {
+  browserManager.hide();
+});
+
 const CEF_URL = 'http://localhost:5173';
 
 mp.events.add('playerReady', () => {
   browserManager.create(CEF_URL);
+});
+
+// Once the CEF DOM is loaded, tell the server — it will show the appropriate page.
+mp.events.add('browserDomReady', () => {
+  mp.events.callRemote('client:browserReady');
 });
 
 /**

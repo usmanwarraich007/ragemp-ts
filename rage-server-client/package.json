@@ -11,13 +11,15 @@
   "author": "pimpmfl",
   "license": "MIT",
   "dependencies": {
-    "typeorm": "0.3.24",
+    "bcryptjs": "^3.0.3",
+    "pg": "8.16.0",
     "reflect-metadata": "0.2.2",
-    "pg": "8.16.0"
+    "typeorm": "0.3.24"
   },
   "devDependencies": {
     "@ragempcommunity/types-client": "2.1.9",
     "@ragempcommunity/types-server": "2.1.9",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "22.15.18",
     "dotenv": "16.5.0",
     "esbuild": "0.25.4",
