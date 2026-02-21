@@ -1,0 +1,1 @@
+export { browserManager } from './BrowserManager';

@@ -1,6 +1,7 @@
 packages:
   - rage-server-client
   - rage-cef
+  - rage-shared
 
 onlyBuiltDependencies:
   - esbuild

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car HUD Display</title>
+<style>
+  /* Base Reset & Background to simulate the dark road */
+  body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(circle at center, #3a3a40 0%, #1a1a1c 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  }
+
+  /* Main Container */
+  .hud-container {
+    position: relative;
+    width: 360px;
+    height: 320px;
+  }
+
+  /* Main Speedometer Gauge */
+  .speed-gauge {
+    position: absolute;
+    top: 0;
+    right: 20px;
+    width: 250px;
+    height: 250px;
+  }
+
+  .arc-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(140deg); /* Starts the arc roughly at bottom-left */
+  }
+
+  /* Text inside Speedometer */
+  .speed-display {
+    position: absolute;
+    top: 75px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .speed-number {
+    font-size: 72px;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1;
+    margin: 0;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+  }
+
+  .speed-unit {
+    font-size: 16px;
+    font-weight: 500;
+    color: #d1d1d1;
+    letter-spacing: 1.5px;
+    margin-top: 4px;
+  }
+
+  /* Status Icons Array */
+  .status-icons {
+    position: absolute;
+    top: 175px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .icon-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+  }
+
+  .icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Colors and Glow Effects */
+  .icon.yellow {
+    color: #FFC107;
+    filter: drop-shadow(0 0 6px rgba(255, 193, 7, 0.5));
+  }
+  
+  .icon.white {
+    color: #F0F0F0;
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
+  }
+
+  /* Fuel Gauge */
+  .fuel-gauge {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    width: 100px;
+    height: 100px;
+  }
+
+  .fuel-gauge .arc-svg {
+    transform: rotate(95deg); /* Starts at bottom */
+  }
+
+  .fuel-icon {
+    position: absolute;
+    top: 38px;
+    left: 38px;
+    width: 24px;
+    height: 24px;
+    color: #ffffff;
+  }
+</style>
+</head>
+<body>
+
+<div class="hud-container">
+  
+  <div class="fuel-gauge">
+    <svg class="arc-svg" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255, 255, 255, 0.5)" stroke-width="4" stroke-dasharray="140 251" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#FFC107" stroke-width="6" stroke-dasharray="60 251" stroke-linecap="round"/>
+    </svg>
+    <svg class="fuel-icon" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M19 16V9c0-1.1-.9-2-2-2s-2 .9-2 2v5c0 1.1-.9 2-2 2H9c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h4V2H9c-2.2 0-4 1.8-4 4v10c0 2.2 1.8 4 4 4h4c2.2 0 4-1.8 4-4zm-4-7h-4V6h4v3zm5 3h-2v2h2v-2z"/>
+    </svg>
+  </div>
+
+  <div class="speed-gauge">
+    <svg class="arc-svg" viewBox="0 0 250 250">
+      <circle cx="125" cy="125" r="110" fill="none" stroke="rgba(255, 255, 255, 0.6)" stroke-width="6" stroke-dasharray="350 691" stroke-linecap="round"/>
+      <circle cx="125" cy="125" r="110" fill="none" stroke="#FFC107" stroke-width="12" stroke-dasharray="150 691" stroke-linecap="round"/>
+    </svg>
+
+    <div class="speed-display">
+      <h1 class="speed-number">40</h1>
+      <span class="speed-unit">KM/H</span>
+    </div>
+
+    <div class="status-icons">
+      <div class="icon-row">
+        <svg class="icon yellow" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="10" cy="6" r="2.5" />
+          <path d="M10 10c-1.5 0-2.5 1-2.5 2.5V18h5v-5.5c0-.5.5-1 1-1h2.5V10H10z" />
+          <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+
+        <svg class="icon white" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M18.9 6c-.2-.6-.8-1-1.4-1h-11c-.7 0-1.2.4-1.4 1L3 12v8c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-1h12v1c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-8l-2.1-6zM6.5 16c-.8 0-1.5-.7-1.5-1.5S5.7 13 6.5 13s1.5.7 1.5 1.5S7.3 16 6.5 16zm11 0c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+        </svg>
+
+        <svg class="icon yellow" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M20 13v-2h-2V9c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v2H4v2h2v4h12v-4h2zm-4 0H8V9h8v4z"/>
+        </svg>
+      </div>
+
+      <div class="icon-row">
+        <svg class="icon white" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2C8.1 2 5 5.1 5 9c0 2.4 1.2 4.5 3 5.7V17c0 .6.4 1 1 1h6c.6 0 1-.4 1-1v-2.3c1.8-1.3 3-3.4 3-5.7 0-3.9-3.1-7-7-7zm2.9 11.1l-.9.6V16h-4v-2.3l-.9-.6C7.8 12.2 7 10.6 7 9c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.6-.8 3.2-2.1 4.1zM10 20h4v1h-4z"/>
+        </svg>
+
+        <svg class="icon yellow" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M18 8h-1V6c0-2.8-2.2-5-5-5S7 3.2 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.7 1.4-3.1 3.1-3.1 1.7 0 3.1 1.4 3.1 3.1v2z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

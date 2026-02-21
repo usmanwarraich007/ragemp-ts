@@ -1,11 +1,9 @@
-import '../../assets/main.css';
+/**
+ * hello-world module registration.
+ * Imported automatically by src/modules/index.ts (via glob).
+ */
+import { createModule } from '@/core';
+import HelloWorld from './HelloWorld.vue';
 
-import { createApp } from 'vue';
-// import { createPinia } from 'pinia'
-import HelloWorldView from './views/HelloWorldView.vue';
+createModule('hello-world', HelloWorld);
 
-const app = createApp(HelloWorldView);
-
-// app.use(createPinia())
-
-app.mount('#app');

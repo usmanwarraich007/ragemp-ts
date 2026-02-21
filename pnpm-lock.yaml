@@ -10,6 +10,9 @@ importers:
 
   rage-cef:
     dependencies:
+      '@ragemp/shared':
+        specifier: workspace:*
+        version: link:../rage-shared
       pinia:
         specifier: 3.0.2
         version: 3.0.2(typescript@5.8.3)(vue@3.5.14(typescript@5.8.3))
@@ -111,6 +114,12 @@ importers:
       typescript-eslint:
         specifier: 8.32.1
         version: 8.32.1(eslint@9.26.0(jiti@2.4.2))(typescript@5.8.3)
+
+  rage-shared:
+    devDependencies:
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
 
 packages:
 

@@ -16,6 +16,7 @@
     "check-format": "prettier --check src/ --config ../.prettierrc"
   },
   "dependencies": {
+    "@ragemp/shared": "workspace:*",
     "pinia": "3.0.2",
     "vue": "3.5.14"
   },
