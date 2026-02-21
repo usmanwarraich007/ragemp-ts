@@ -4,7 +4,11 @@
     "types": ["../../node_modules/@ragempcommunity/types-server"],
     "rootDir": "./",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ragemp/shared": ["../../../rage-shared/src/index.ts"]
+    }
   },
   "include": ["./**/*.ts"]
 }

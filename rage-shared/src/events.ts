@@ -5,6 +5,13 @@
 import type { SpeedometerData, AreaData, InteractButton } from './types/hud';
 import type { PlayerStats } from './types/player';
 
+export interface NotificationPayload {
+  type: 'success' | 'error' | 'info' | 'warning';
+  message: string;
+  /** Duration in ms before auto-dismiss. Default: 4000 */
+  duration?: number;
+}
+
 export interface CefEventMap {
   // System
   'system:setPage': string | null;
@@ -15,7 +22,7 @@ export interface CefEventMap {
   'hud:showInteractButton': InteractButton | null;
 
   // Notifications
-  'notify:show': { type: string; message: string; skin?: 'light' | 'dark' | 'colored' };
+  'notify:show': NotificationPayload;
 
   // Player
   'player:setStats': PlayerStats;

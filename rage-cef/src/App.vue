@@ -3,6 +3,7 @@
   <div id="cef-root">
     <!-- Persistent HUD overlays — always mounted, visibility controlled internally -->
     <Speedometer />
+    <Notification />
 
     <!-- Page-based modules — switched in/out via setPage -->
     <Transition name="page" mode="out-in">
@@ -20,6 +21,7 @@ import { computed } from 'vue';
 import { getModule } from '@/core';
 import { usePageStore } from '@/stores/page.store';
 import Speedometer from '@/modules/speedometer/Speedometer.vue';
+import Notification from '@/modules/notification/Notification.vue';
 
 // Load all modules — triggers self-registration via createModule()
 import '@/modules';

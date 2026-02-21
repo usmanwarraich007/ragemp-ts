@@ -85,6 +85,14 @@ class BrowserManager {
   private execute(event: string, jsonPayload: string): void {
     this.browser?.execute(`window.callHandler(${JSON.stringify(event)}, ${jsonPayload})`);
   }
+
+  /**
+   * Execute arbitrary JS in the browser — used by RpcBridge for window.rpc calls.
+   * Bypasses the callHandler protocol intentionally.
+   */
+  executeRaw(js: string): void {
+    this.browser?.execute(js);
+  }
 }
 
 export const browserManager = new BrowserManager();

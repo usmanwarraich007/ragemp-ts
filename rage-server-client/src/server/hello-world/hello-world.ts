@@ -1,9 +1,7 @@
-import { initDatabase } from '../database';
-
-mp.events.add('playerChat', (player: PlayerMp) => {
+/**
+ * hello-world — minimal "server is alive" smoke check.
+ * Remove or replace this with a real feature.
+ */
+mp.events.add('playerReady', (player: PlayerMp) => {
   player.outputChatBox('Hello World! - server');
-});
-
-mp.events.add('packagesLoaded', async () => {
-  await initDatabase();
 });

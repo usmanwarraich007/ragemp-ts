@@ -10,5 +10,6 @@ export const AppDataSource = new DataSource({
   password: POSTGRES_PASSWORD,
   database: POSTGRES_DB,
   synchronize: POSTGRES_HOST === 'localhost',
-  logging: true
+  logging: true,
+  entities: [__dirname + '/../features/**/*.entity.js'],
 });

@@ -1,8 +1,12 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": ["../../node_modules/@ragempcommunity/types-client"],
-    "rootDir": "./"
+    "types": ["../../node_modules/@ragempcommunity/types-client", "node"],
+    "rootDir": "./",
+    "baseUrl": ".",
+    "paths": {
+      "@ragemp/shared": ["../../../rage-shared/src/index.ts"]
+    }
   },
   "include": ["./**/*.ts"]
 }

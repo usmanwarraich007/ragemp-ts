@@ -7,6 +7,7 @@ const buildScriptsDirectory = path.resolve();
 const rootDirectory = path.resolve(buildScriptsDirectory, '../');
 const buildOutput = path.resolve(rootDirectory, 'dist');
 const sourcePath = path.resolve(rootDirectory, 'rage-server-client/src');
+const sharedSrc = path.resolve(rootDirectory, 'rage-shared/src/index.ts');
 
 // These files will not be changed or removed during the build step
 const preserved = [
@@ -117,7 +118,10 @@ const generateConfig = async (isServerBuild) => {
     outfile: outputFile,
     sourcemap: false,
     target: ['node14'],
-    minify: true
+    minify: true,
+    alias: {
+      '@ragemp/shared': sharedSrc,
+    },
   });
 };
 

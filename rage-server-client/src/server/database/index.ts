@@ -1,11 +1,12 @@
 import { AppDataSource } from './data-source';
+import { log } from '../core/logger';
 
-export async function initDatabase() {
+export async function initDatabase(): Promise<void> {
   try {
     await AppDataSource.initialize();
-    console.log('Database connected.');
+    log.info('[Database]', 'Connected successfully.');
   } catch (err) {
-    console.error('Database connection failed: ', err);
+    log.error('[Database]', 'Connection failed — shutting down.', err);
     process.exit(1);
   }
 }
