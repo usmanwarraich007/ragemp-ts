@@ -6,9 +6,13 @@ import { browserManager } from '../browser';
  * Receives a RPC request from the CEF (Vue), calls the server via
  * callRemoteProc, and resolves/rejects the CEF Promise via browser.executeRaw.
  */
-mp.events.add('rpc:request', async (reqId: string, eventName: string, ...args: unknown[]) => {
+mp.events.add('rpc:request', async (reqId: string, eventName: string, argsJSON: string) => {
   try {
-    const result = await mp.events.callRemoteProc('rpc:call', eventName, ...args);
+    // CEF packs all args as a single JSON string to preserve objects across the trigger boundary.
+    const args = (argsJSON ? JSON.parse(argsJSON) : []) as unknown[];
+    // Also pack args as JSON for the client→server callRemoteProc boundary,
+    // which has the same object coercion problem as mp.trigger.
+    const result = await mp.events.callRemoteProc('rpc:call', eventName, JSON.stringify(args));
     const resultJSON = JSON.stringify(result ?? null);
     browserManager.executeRaw(`window.rpc.resolve(${JSON.stringify(reqId)}, ${resultJSON})`);
   } catch (err) {

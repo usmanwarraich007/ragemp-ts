@@ -12,7 +12,11 @@ export const clientRpc = {
     proc: K,
     ...args: Parameters<ServerRPCs[K]>
   ): Promise<ReturnType<ServerRPCs[K]>> {
-    return mp.events.callRemoteProc('rpc:call', proc, ...args) as Promise<
+    // Server's rpc:call addProc handler expects (player, eventName, argsJSON)
+    // where argsJSON is a single JSON-encoded string of the args array.
+    // Spreading args raw would send them as separate RAGE:MP event args, not matching the server signature.
+    const argsJSON = JSON.stringify(args);
+    return mp.events.callRemoteProc('rpc:call', proc, argsJSON) as Promise<
       ReturnType<ServerRPCs[K]>
     >;
   },

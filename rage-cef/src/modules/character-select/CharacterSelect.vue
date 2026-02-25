@@ -33,7 +33,7 @@
         <div
           v-if="characters.length < MAX_CHARS"
           class="char-card create-card"
-          @click="showCreate = !showCreate; createError = ''"
+          @click="openCreator"
         >
           <div class="char-avatar create-icon">+</div>
           <div class="char-info">
@@ -42,31 +42,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Create Form -->
-      <Transition name="form">
-        <form v-if="showCreate" @submit.prevent="createCharacter" class="create-form">
-          <div class="create-row">
-            <div class="create-field">
-              <label class="field-label">First Name</label>
-              <input v-model="newFirst" class="field-input" maxlength="32" placeholder="John" required />
-            </div>
-            <div class="create-field">
-              <label class="field-label">Last Name</label>
-              <input v-model="newLast" class="field-input" maxlength="32" placeholder="Doe" required />
-            </div>
-          </div>
-          <div class="gender-row">
-            <button type="button" :class="['gender-btn', { active: newGender === 'male' }]" @click="newGender = 'male'">♂ Male</button>
-            <button type="button" :class="['gender-btn', { active: newGender === 'female' }]" @click="newGender = 'female'">♀ Female</button>
-          </div>
-          <div v-if="createError" class="auth-error">{{ createError }}</div>
-          <button type="submit" class="submit-btn" :disabled="creating">
-            <span v-if="creating" class="spinner" />
-            <span>Create Character</span>
-          </button>
-        </form>
-      </Transition>
 
       <!-- Error -->
       <div v-if="selectError" class="auth-error">{{ selectError }}</div>
@@ -83,14 +58,7 @@ const MAX_CHARS = 3;
 
 const characters = ref<CharacterSummary[]>([]);
 const loading = ref(true);
-const showCreate = ref(false);
-const creating = ref(false);
 const selectError = ref('');
-const createError = ref('');
-
-const newFirst = ref('');
-const newLast = ref('');
-const newGender = ref<'male' | 'female'>('male');
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -110,19 +78,8 @@ async function selectCharacter(id: number) {
   if (!result.success) selectError.value = result.error ?? 'Failed to select character.';
 }
 
-async function createCharacter() {
-  createError.value = '';
-  creating.value = true;
-  try {
-    const char = await rpc.callServer('character:create', newFirst.value.trim(), newLast.value.trim(), newGender.value);
-    characters.value.push(char);
-    showCreate.value = false;
-    newFirst.value = ''; newLast.value = '';
-  } catch (e: unknown) {
-    createError.value = e instanceof Error ? e.message : 'Server error.';
-  } finally {
-    creating.value = false;
-  }
+function openCreator() {
+  window.mp?.trigger('cmd:showPage', 'character-creator');
 }
 </script>
 

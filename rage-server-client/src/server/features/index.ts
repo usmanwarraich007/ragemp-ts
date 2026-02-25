@@ -3,6 +3,8 @@
  */
 
 import './auth/auth.feature';
+import './admin/admin.feature';
+import './vehicles/vehicle-trunk.feature';
 
 // Remove when replacing with real features:
 import '../hello-world/hello-world';

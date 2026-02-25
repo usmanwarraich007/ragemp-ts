@@ -114,7 +114,9 @@ export const rpc = {
 
       const mp = (window as Window & { mp?: { trigger: (...a: unknown[]) => void } }).mp;
       if (mp) {
-        mp.trigger('rpc:request', id, String(eventName), ...args);
+        // Pack ALL args as a single JSON string so objects (e.g. appearance) survive
+        // the CEF→Client mp.trigger boundary without being coerced to primitives.
+        mp.trigger('rpc:request', id, String(eventName), JSON.stringify(args));
       } else {
         // Dev mock — resolve immediately with empty object
         clearTimeout(timer);

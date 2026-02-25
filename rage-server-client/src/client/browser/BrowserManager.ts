@@ -11,6 +11,8 @@ class BrowserManager {
   private browser: BrowserMp | null = null;
   private domReady = false;
   private queue: Array<{ event: string; jsonPayload: string }> = [];
+  /** True when the cursor was force-enabled via F2 (independent of page state). */
+  private cursorForced = false;
 
   constructor() {
     // Flush the queue as soon as the CEF page finishes loading
@@ -21,6 +23,14 @@ class BrowserManager {
         this.execute(event, jsonPayload);
       }
       this.queue = [];
+    });
+
+    // F2 — emergency cursor toggle.
+    // Useful when a page opens but cursor gets stuck, or to interact with CEF
+    // elements without going through a full page show/hide cycle.
+    mp.keys.bind(113, true, () => {
+      this.cursorForced = !this.cursorForced;
+      mp.gui.cursor.show(this.cursorForced, this.cursorForced);
     });
   }
 

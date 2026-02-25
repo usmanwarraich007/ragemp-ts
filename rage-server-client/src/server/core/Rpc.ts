@@ -69,7 +69,7 @@ export const rpc = {
 
 // ── addProc listener — single entry point for all server RPCs ──────────────
 
-mp.events.addProc('rpc:call', async (player: PlayerMp, eventName: string, ...args: unknown[]) => {
+mp.events.addProc('rpc:call', async (player: PlayerMp, eventName: string, argsJSON: string) => {
   const handler = rpcHandlers.get(eventName);
 
   if (!handler) {
@@ -78,10 +78,11 @@ mp.events.addProc('rpc:call', async (player: PlayerMp, eventName: string, ...arg
   }
 
   try {
+    // Client packs all args as JSON to preserve complex objects across callRemoteProc boundary.
+    const args = (argsJSON ? JSON.parse(argsJSON) : []) as unknown[];
     return await handler(player, ...args);
   } catch (err) {
     console.error(`[RPC Error] "${eventName}":`, err);
-    // Throw a string so RAGE:MP can serialize it cleanly
     throw String(err);
   }
 });

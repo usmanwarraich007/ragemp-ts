@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { Rpc, playerStore, notify, log } from '../../core';
 import { Account } from './account.entity';
 import { Character } from './character.entity';
-import type { AuthResult, CharacterSummary } from '@ragemp/shared';
+import type { AuthResult, CharacterSummary, CharacterAppearance } from '@ragemp/shared';
 
 const MAX_CHARACTERS = 3;
 
@@ -23,6 +23,7 @@ function toSummary(c: Character): CharacterSummary {
     gender: c.gender,
     cash: c.cash,
     createdAt: c.createdAt.toISOString(),
+    appearance: c.appearance ?? null,
   };
 }
 
@@ -131,6 +132,7 @@ class AuthFeature {
     firstName: string,
     lastName: string,
     gender: 'male' | 'female',
+    appearance: CharacterAppearance,
   ): Promise<CharacterSummary> {
     const data = playerStore.get(player);
     if (!data?.account) throw new Error('Not authenticated.');
@@ -143,6 +145,7 @@ class AuthFeature {
       firstName,
       lastName,
       gender,
+      appearance,
       posX: DEFAULT_SPAWN.x,
       posY: DEFAULT_SPAWN.y,
       posZ: DEFAULT_SPAWN.z,
@@ -152,6 +155,25 @@ class AuthFeature {
 
     log.info('[Auth]', `Character created: ${firstName} ${lastName} for ${data.account.username}`);
     return toSummary(character);
+  }
+
+  @Rpc('character:saveAppearance')
+  static async saveAppearance(
+    player: PlayerMp,
+    characterId: number,
+    appearance: CharacterAppearance,
+  ): Promise<AuthResult> {
+    const data = playerStore.get(player);
+    if (!data?.account) return { success: false, error: 'Not authenticated.' };
+
+    const character = await Character.findOne({
+      where: { id: characterId, accountId: data.account.id },
+    });
+    if (!character) return { success: false, error: 'Character not found.' };
+
+    await Character.update(characterId, { appearance });
+    log.info('[Auth]', `Appearance saved for character ${characterId}`);
+    return { success: true };
   }
 
   @Rpc('character:select')
@@ -190,6 +212,11 @@ class AuthFeature {
     hidePage(player);
     notify(player).screen.success(`Welcome, ${character.firstName}!`);
     log.info('[Auth]', `${data.account.username} selected: ${character.firstName} ${character.lastName}`);
+
+    // Apply saved appearance on the client ped
+    if (character.appearance) {
+      player.call('character:applyAppearance', [JSON.stringify(character.appearance)]);
+    }
 
     return { success: true };
   }

@@ -2,6 +2,7 @@ import 'reflect-metadata'; // Must be first — before any entity or TypeORM imp
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../database/BaseEntity';
 import { Account } from './account.entity';
+import type { CharacterAppearance } from '@ragemp/shared';
 
 @Entity('characters')
 export class Character extends BaseEntity {
@@ -47,4 +48,8 @@ export class Character extends BaseEntity {
   // ── Job ─────────────────────────────────────────────────────
   @Column({ type: 'varchar', nullable: true, default: null })
   job!: string | null;
+
+  // ── Appearance ──────────────────────────────────────────────
+  @Column({ type: 'jsonb', nullable: true, default: null })
+  appearance!: CharacterAppearance | null;
 }
