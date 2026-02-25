@@ -3,17 +3,20 @@
  * Feature scripts import from here; never import sub-files directly.
  *
  * @example
- * import { registry } from '../interaction';
- * registry.register({ id: 'my-thing', … });
+ * import { registry, markerSystem } from '../interaction';
  */
 
-// Core registry (the main API for feature authors)
-export { registry }                               from './InteractableRegistry';
-export type { WorldInteractable, InteractableMenuItem } from './WorldInteractable';
+// Core registry
+export { registry }                                          from './InteractableRegistry';
+export type { WorldInteractable, InteractableMenuItem }      from './WorldInteractable';
 
-// Menu engine (only needed by InteractableRegistry internally)
-export { interactionMenu }                        from './InteractionMenu';
+// Marker system (separate from registry — purely visual)
+export { markerSystem }                                      from './MarkerSystem';
+export type { WorldMarker }                                  from './MarkerSystem';
 
-// Raycast utility (used by registry and vehicle features)
-export { raycastFromCamera, distVec }             from './Raycast';
-export type { RaycastResult }                     from './Raycast';
+// Menu engine (consumed by registry internally)
+export { interactionMenu }                                   from './InteractionMenu';
+
+// Raycast utility
+export { raycastFromCamera, distVec }                        from './Raycast';
+export type { RaycastResult }                                from './Raycast';

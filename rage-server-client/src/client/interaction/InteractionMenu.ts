@@ -14,7 +14,8 @@ export interface ActiveMenuSlot {
   /** Must match the originating WorldInteractable.id for selection persistence */
   id:       string;
   getTitle: () => string;
-  items:    { label: string; action: string }[];
+  /** Called every frame — supports dynamic items (Open ↔ Close etc.) */
+  getItems: () => { label: string; action: string }[];
   /** World-space anchor (null = hide menu this frame) */
   getPos:   () => Vector3 | null;
   onSelect: (action: string) => void;
@@ -87,7 +88,7 @@ class InteractionMenu {
     // Clamp selection if new slot has fewer items
     if (slot && slot.id !== this.slot?.id) {
       const saved = this.selectionState.get(slot.id) ?? 0;
-      const clamped = Math.min(saved, Math.max(0, slot.items.length - 1));
+      const clamped = Math.min(saved, Math.max(0, slot.getItems().length - 1));
       this.selectionState.set(slot.id, clamped);
     }
     this.slot = slot;
@@ -134,7 +135,7 @@ class InteractionMenu {
     }
 
     // Items
-    const items = this.slot.items;
+    const items = this.slot.getItems();
     for (let i = 0; i < items.length; i++) {
       const rowY      = sy + ITEM_START_Y + ROW_STEP * i;
       const isSelected = i === this.selectedIndex;
@@ -158,14 +159,14 @@ class InteractionMenu {
 
   private scroll(dir: 1 | -1): void {
     if (!this.slot) return;
-    const count = this.slot.items.length;
+    const count = this.slot.getItems().length;
     if (count === 0) return;
     this.selectedIndex = (this.selectedIndex + dir + count) % count;
   }
 
   private onInteract(): void {
     if (!this.slot) return;
-    const item = this.slot.items[this.selectedIndex];
+    const item = this.slot.getItems()[this.selectedIndex];
     if (!item) return;
     this.slot.onSelect(item.action);
   }

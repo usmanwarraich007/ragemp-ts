@@ -1,15 +1,8 @@
 /**
  * WorldInteractable.ts — Core interface for the world interaction system.
+ * Zero runtime code — pure types only.
  *
- * This file is pure types — zero runtime code.
- * Every feature that wants to show a label / menu in the world implements
- * this interface and registers it with InteractableRegistry.
- *
- * Examples:
- *   Vehicle door    → position from bone, registered on entityStreamIn
- *   Static ATM      → fixed Vector3, registered at startup
- *   Prop door       → bone position from object handle
- *   NPC             → ped.position updated each frame
+ * Feature authors implement this interface and call registry.register().
  */
 
 // ── Menu item ─────────────────────────────────────────────────────────────
@@ -26,8 +19,6 @@ export interface InteractableMenuItem {
 export interface WorldInteractable {
   /**
    * Globally unique ID.
-   * Used for selection-state persistence (scroll position survives look-away).
-   *
    * Naming convention:
    *   static:  'atm-beach-01'
    *   entity:  'veh-{remoteId}-door-dside-f'
@@ -37,43 +28,79 @@ export interface WorldInteractable {
 
   // ── Label (proximity) ──────────────────────────────────────────────────
 
-  /** Text rendered above the interactable point when the player is nearby. */
+  /** Primary text shown when player is nearby. */
   label: string;
 
   /**
-   * Maximum distance (metres) at which the label is visible.
-   * Recommended defaults:
-   *   Tight interaction  → 2.0 m  (door handle, ATM button)
-   *   Medium             → 3.0 m  (vehicle door, NPC)
-   *   Broad              → 5.0 m  (shop entrance marker)
+   * Optional second line under the label (e.g. address, owner name).
+   * @example subtitle: 'Innocence Blvd. 9'
+   */
+  subtitle?: string;
+
+  /**
+   * Distance (m) within which the label is drawn.
+   * Use a larger value than interactRadius so the label appears
+   * before the player can actually interact.
    */
   labelRadius: number;
 
   // ── Position source ────────────────────────────────────────────────────
 
   /**
-   * Called once per frame by InteractableRegistry (only while the player is
-   * within range of the last known position).
-   *
-   * Return null to hide this interactable for the current frame.
-   * The registry uses the last non-null result as its range pre-filter anchor.
+   * Called every frame while the player is within range.
+   * Return null to hide this interactable this frame.
    */
   getPosition(): Vector3 | null;
+
+  // ── Interaction gate ───────────────────────────────────────────────────
+
+  /**
+   * Maximum distance (m) within which the ray-snap triggers and the E key
+   * works. Defaults to labelRadius when omitted.
+   *
+   * Typical pattern: labelRadius = 5.0, interactRadius = 1.5
+   * → label is visible from 5 m, menu only opens when inside 1.5 m.
+   */
+  interactRadius?: number;
+
+  /**
+   * Optional gate called just before showing the menu.
+   * - Return true  → allow interaction normally.
+   * - Return false → silently block (no message).
+   * - Return string → block and show the string as an error notification.
+   *
+   * @example canInteract: () => !mp.players.local.vehicle || 'Exit the vehicle first.'
+   */
+  canInteract?: () => boolean | string;
 
   // ── Interaction menu ───────────────────────────────────────────────────
 
   /**
-   * Menu header line. Defaults to `label` when omitted.
-   * May be mutated each frame to reflect live state, e.g. "[OPEN]" / "[CLOSED]".
+   * Menu header line.
+   * - Omit / undefined → defaults to `label`.
+   * - Empty string '' → title row hidden (proximity label already shows the name).
    */
   menuTitle?: string;
 
-  /** Actions in the scrollable menu. */
-  items: InteractableMenuItem[];
+  /**
+   * Items in the scrollable menu.
+   * Pass a getter function to support dynamic items (e.g. "Open" ↔ "Close").
+   *
+   * @example items: () => [{ label: isDoorOpen ? 'Close' : 'Open', action: 'toggle' }]
+   */
+  items: InteractableMenuItem[] | (() => InteractableMenuItem[]);
 
   /**
    * Called when the player presses E on a menu item.
-   * @param action — the item's action string
    */
   onSelect(action: string): void;
+
+  // ── Ray snap ───────────────────────────────────────────────────────────
+
+  /**
+   * Override the ray-to-point snap radius for this interactable.
+   * Increase for large props where the player shouldn't need to aim precisely.
+   * Default: 0.7 m.
+   */
+  snapRadius?: number;
 }
