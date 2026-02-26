@@ -10,3 +10,4 @@ export { Rpc, rpc }     from './Rpc';
 export { playerStore }  from './playerStore';
 export { log }          from './logger';
 export { notify }       from './notify';
+export { Cache, GroupCache } from './Cache';

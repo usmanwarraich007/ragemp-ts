@@ -7,6 +7,7 @@ import { POSTGRES_DB, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_USER, POSTGRES_
 // Register every entity class explicitly here.
 import { Account } from '../features/auth/account.entity';
 import { Character } from '../features/auth/character.entity';
+import { Business, BusinessInventory, BusinessZone } from '../features/business/business.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -15,7 +16,7 @@ export const AppDataSource = new DataSource({
   username: POSTGRES_USER,
   password: POSTGRES_PASSWORD,
   database: POSTGRES_DB,
-  synchronize: process.env.NODE_ENV !== 'production', // auto-creates tables in dev
+  synchronize: process.env.NODE_ENV !== 'production',
   logging: true,
-  entities: [Account, Character],
+  entities: [Account, Character, Business, BusinessInventory, BusinessZone],
 });

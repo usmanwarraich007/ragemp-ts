@@ -1,7 +1,8 @@
 import './interaction/InteractionMenu'; // menu draw engine — must load before registry
 import './interaction/MarkerSystem';    // standalone world marker renderer
 import './vehicles/vehicle-bone-hud';   // all vehicle bone interactables (doors, hood, trunk)
-import './test/test-dealership';         // ← test: remove when done
+import './session';                      // stores characterId sent by server on character:select
+import './business';                     // business system — registers handlers for all types
 import './hello-world/hello-world';
 import './hud/vehicle-hud';
 import './hud/notification-relay';

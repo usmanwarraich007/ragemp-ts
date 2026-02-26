@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { Rpc, playerStore, notify, log } from '../../core';
 import { Account } from './account.entity';
 import { Character } from './character.entity';
+import { syncPlayerWorld } from '../business/business.feature';
 import type { AuthResult, CharacterSummary, CharacterAppearance } from '@ragemp/shared';
 
 const MAX_CHARACTERS = 3;
@@ -217,6 +218,12 @@ class AuthFeature {
     if (character.appearance) {
       player.call('character:applyAppearance', [JSON.stringify(character.appearance)]);
     }
+
+    // Tell client who the local character is (used for ownership checks)
+    player.call('character:setId', [character.id]);
+
+    // Sync world data to the newly spawned character
+    void syncPlayerWorld(player);
 
     return { success: true };
   }
