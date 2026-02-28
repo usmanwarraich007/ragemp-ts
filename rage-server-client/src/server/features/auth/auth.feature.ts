@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { Rpc, playerStore, notify, log } from '../../core';
 import { Account } from './account.entity';
 import { Character } from './character.entity';
+import { applyAppearance } from './ped';
 import { syncPlayerWorld } from '../business/business.feature';
 import type { AuthResult, CharacterSummary, CharacterAppearance } from '@ragemp/shared';
 
@@ -214,10 +215,12 @@ class AuthFeature {
     notify(player).screen.success(`Welcome, ${character.firstName}!`);
     log.info('[Auth]', `${data.account.username} selected: ${character.firstName} ${character.lastName}`);
 
-    // Apply saved appearance on the client ped
+    // Apply saved appearance — called server-side so RAGE:MP syncs it to all
+    // players who stream this ped. (player.call() would only apply locally.)
     if (character.appearance) {
-      player.call('character:applyAppearance', [JSON.stringify(character.appearance)]);
+      applyAppearance(player, character.appearance);
     }
+
 
     // Tell client who the local character is (used for ownership checks)
     player.call('character:setId', [character.id]);

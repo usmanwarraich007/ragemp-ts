@@ -34,7 +34,7 @@ export class Store247Handler extends BusinessHandler {
       scale:         1.0,
       visibleRadius: 60,
       rotate:        true,
-      heightOffset:  -0.1,
+      heightOffset:  -0.95,
     });
     registry.register({
       id:             this.zoneId('customer'),
@@ -62,7 +62,7 @@ export class Store247Handler extends BusinessHandler {
       scale:         0.8,
       visibleRadius: 30,
       rotate:        true,
-      heightOffset:  -0.1,
+      heightOffset:  -0.95,
     });
     registry.register({
       id:             this.zoneId('owner'),
@@ -104,7 +104,7 @@ export class Store247Handler extends BusinessHandler {
         scale:         1.0,
         visibleRadius: 60,
         rotate:        true,
-        heightOffset:  -0.1,
+        heightOffset:  -0.95,
       });
     }
     return reloaded;

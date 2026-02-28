@@ -171,6 +171,34 @@ class AdminCommands {
     player.outputChatBox(`!{00FF88}Skin changed to: ${model}`);
   }
 
+  @Command('revive', { usage: '/revive [id?]', adminLevel: 1 })
+  static revivePlayer(player: PlayerMp, targetId?: string): void {
+    const target = targetId
+      ? mp.players.at(parseInt(targetId))
+      : player;
+
+    if (!target || !mp.players.exists(target)) {
+      player.outputChatBox('!{FF4444}Player not found.');
+      return;
+    }
+
+    // Restore health (RAGE:MP health includes the 100 base — 200 = full)
+    target.health = 200;
+    target.armour = 0;
+
+    // Spawn the ped at their current position in case they are in a death state
+    target.spawn(target.position);
+
+    if (target.id !== player.id) {
+      target.outputChatBox('!{00FF88}You have been revived by an admin.');
+      player.outputChatBox(`!{00FF88}Revived ${target.name}.`);
+    } else {
+      player.outputChatBox('!{00FF88}You have been revived.');
+    }
+
+    log.info('[Admin]', `${player.name} revived ${target.name}`);
+  }
+
   @Command('setadmin', { usage: '/setadmin [id] [level]', minArgs: 2, adminLevel: 5 })
   static setAdmin(player: PlayerMp, targetId: string, level: string): void {
     const target = mp.players.at(parseInt(targetId));

@@ -1,5 +1,40 @@
 import { browserManager } from '../browser';
 
+// ── CEF → Client RPC (cef::rpc) ───────────────────────────────────────────
+
+type CefRpcHandler = (args: unknown[]) => unknown | Promise<unknown>;
+const cefRpcHandlers = new Map<string, CefRpcHandler>();
+
+/**
+ * Register a handler that CEF can await via bridge.callClient(name, payload).
+ *
+ * @example
+ * registerCefRpc('player:getPosition', () => {
+ *   const p = mp.players.local.position;
+ *   return { x: p.x, y: p.y, z: p.z };
+ * });
+ */
+export function registerCefRpc(name: string, handler: CefRpcHandler): void {
+  cefRpcHandlers.set(name, handler);
+}
+
+mp.events.add('cef::rpc', async (dataJson: string) => {
+  let id = '', name = '', args: unknown[] = [];
+  try {
+    ({ id, name, args } = JSON.parse(dataJson) as { id: string; name: string; args: unknown[] });
+    const handler = cefRpcHandlers.get(name);
+    if (!handler) throw new Error(`[CefRpc] No handler registered for: ${name}`);
+    const result = await handler(args);
+    browserManager.executeRaw(
+      `window._rageRpc?.resolve(${JSON.stringify(id)}, ${JSON.stringify(JSON.stringify(result ?? null))})`,
+    );
+  } catch (err) {
+    browserManager.executeRaw(
+      `window._rageRpc?.reject(${JSON.stringify(id)}, ${JSON.stringify(String(err))})`,
+    );
+  }
+});
+
 // ── CEF → Server (Forward direction) ──────────────────────────────────────
 
 /**

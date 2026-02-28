@@ -1,6 +1,15 @@
 import type { CefEventMap } from '@ragemp/shared';
 import { eventBus } from './EventBus';
 
+const CEF_RPC_TIMEOUT_MS = 10_000;
+
+type PendingRpc = {
+  resolve: (value: unknown) => void;
+  reject:  (reason: string) => void;
+  timer:   ReturnType<typeof setTimeout>;
+};
+
+
 /**
  * Safely parse a JSON string, falling back to the raw value.
  */
@@ -25,10 +34,30 @@ function tryParseJson(value: unknown): unknown {
  *   - toServer(target, name, payload)  — tunnels through client to server
  */
 class RageBridge {
+  /** Pending CEF→client RPC calls keyed by correlation ID. */
+  private readonly _pendingRpc = new Map<string, PendingRpc>();
+
   /** Call once at app startup, before mounting Vue. */
   init(): void {
     this.setupDevMock();
     this.setupInbound();
+    // Expose resolve/reject hooks so client-side JS can settle pending RPCs
+    (window as any)._rageRpc = {
+      resolve: (id: string, resultJSON: string) => {
+        const pending = this._pendingRpc.get(id);
+        if (!pending) return;
+        clearTimeout(pending.timer);
+        this._pendingRpc.delete(id);
+        try { pending.resolve(JSON.parse(resultJSON)); } catch { pending.resolve(null); }
+      },
+      reject: (id: string, error: string) => {
+        const pending = this._pendingRpc.get(id);
+        if (!pending) return;
+        clearTimeout(pending.timer);
+        this._pendingRpc.delete(id);
+        pending.reject(error);
+      },
+    };
   }
 
   // ── Inbound ──────────────────────────────────────────────────────────────
@@ -87,6 +116,37 @@ class RageBridge {
     }
 
     window.mp?.trigger('server::eventManager', data);
+  }
+
+  /**
+   * Fire a request to the game client and await its response.
+   * The client must register a handler with mp.events.add('cef::rpc', ...)
+   *
+   * @example const pos = await bridge.callClient<Vector3>('player', 'getPosition')
+   */
+  callClient<T = unknown>(name: string, payload?: unknown): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const id = `${name}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      const timer = setTimeout(() => {
+        this._pendingRpc.delete(id);
+        reject(`[RageBridge] Timeout waiting for client response: ${name}`);
+      }, CEF_RPC_TIMEOUT_MS);
+
+      this._pendingRpc.set(id, {
+        resolve: resolve as (v: unknown) => void,
+        reject,
+        timer,
+      });
+
+      const data = JSON.stringify({ id, name, args: payload !== undefined ? [payload] : [] });
+
+      if (import.meta.env.DEV) {
+        console.log(`[RageBridge] ⇄ cef::rpc → ${name}`, payload);
+      }
+
+      window.mp?.trigger('cef::rpc', data);
+    });
   }
 
   // ── Dev Mock ─────────────────────────────────────────────────────────────

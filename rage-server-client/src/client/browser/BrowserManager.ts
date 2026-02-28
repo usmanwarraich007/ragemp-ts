@@ -55,9 +55,9 @@ class BrowserManager {
    * Show the CEF overlay and navigate to a page.
    * Also enables the cursor and disables conflicting game controls.
    */
-  show(page: string): void {
+  show(page: string, data?: unknown, suppressHud = true): void {
     if (!this.browser) return;
-    this.emit('system', 'setPage', page);
+    this.emit('system', 'setPage', { page, data, suppressHud });
     mp.gui.cursor.show(true, true);
   }
 
@@ -66,7 +66,7 @@ class BrowserManager {
    */
   hide(): void {
     if (!this.browser) return;
-    this.emit('system', 'setPage', null);
+    this.emit('system', 'setPage', { page: null });
     mp.gui.cursor.show(false, false);
   }
 

@@ -6,6 +6,7 @@ import './business';                     // business system — registers handle
 import './hello-world/hello-world';
 import './hud/vehicle-hud';
 import './hud/notification-relay';
+import './hud/hud-cleanup';
 import './rpc/RpcBridge';
 import './character-creator/character-creator'; // registers preview + rotate events
 import './admin'; // admin dev utilities
@@ -13,7 +14,10 @@ import { browserManager } from './browser';
 import { clientRpc } from './rpc/clientRpc';
 import { onCreatorOpen, onCreatorClose } from './character-creator/character-creator';
 
-const CEF_URL = 'http://localhost:5173';
+const IS_DEV = false;
+const CEF_URL = IS_DEV
+  ? 'http://localhost:5173'
+  : 'package://cef/index.html';
 
 mp.events.add('playerReady', () => {
   browserManager.create(CEF_URL);

@@ -13,8 +13,15 @@ export interface NotificationPayload {
 }
 
 export interface CefEventMap {
-  // System
-  'system:setPage': string | null;
+  // System — page routing
+  /** Switch the active full-screen page (clears popup, optionally passes data). */
+  'system:setPage': { page: string | null; data?: unknown; suppressHud?: boolean };
+  /** Open a popup/modal above the current page without clearing it. */
+  'system:setPopup': { popup: string; data?: unknown };
+  /** Dismiss the current popup. */
+  'system:clearPopup': void;
+  /** Force-show or force-hide the entire HUD layer. */
+  'system:setHudVisible': boolean;
 
   // HUD
   'hud:setVehicleData': { key: keyof SpeedometerData; data: SpeedometerData[keyof SpeedometerData] };

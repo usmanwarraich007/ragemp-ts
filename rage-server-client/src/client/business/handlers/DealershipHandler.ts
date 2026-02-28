@@ -38,12 +38,12 @@ export class DealershipHandler extends BusinessHandler {
       scale:         1.0,
       visibleRadius: 60,
       rotate:        true,
-      heightOffset:  -0.1,
+      heightOffset:  -0.95,
     });
     registry.register({
       id:             this.zoneId('customer'),
       label:          data.name,
-      subtitle:       'Vehicle Dealership',
+      subtitle:       '',
       labelRadius:    5.0,
       interactRadius: 2.0,
       snapRadius:     2.0,
@@ -67,7 +67,7 @@ export class DealershipHandler extends BusinessHandler {
       scale:         0.8,
       visibleRadius: 30,
       rotate:        true,
-      heightOffset:  -0.1,
+      heightOffset:  -0.95,
     });
     registry.register({
       id:             this.zoneId('owner'),
@@ -92,7 +92,7 @@ export class DealershipHandler extends BusinessHandler {
     const showcasePos = this.zoneVec('showcase', -3, 4);
     markerSystem.register({
       id:            this.zoneId('showcase'),
-      type:          1,
+      type:          36,
       position:      showcasePos,
       color:         [255, 255, 255, 60],
       scale:         2.0,
@@ -124,7 +124,7 @@ export class DealershipHandler extends BusinessHandler {
         scale:         1.0,
         visibleRadius: 60,
         rotate:        true,
-        heightOffset:  -0.1,
+        heightOffset:  -0.95,
       });
     }
     return reloaded;
