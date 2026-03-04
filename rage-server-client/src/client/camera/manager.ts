@@ -28,6 +28,19 @@ class CameraManager {
     return cam;
   }
 
+  /** Destroy a named camera silently — only if it is NOT the current active cam.
+   *  Does NOT call renderScriptCams(false). Safe to call after switching to another
+   *  scripted camera when you want to clean up the previous one. */
+  destroySilent(name: string): void {
+    if (this._activeName === name) return; // never destroy the active camera here
+    const cam = this.cameras.get(name);
+    if (!cam) return;
+    if (mp.cameras.exists(cam) && (cam as any).doesExist()) {
+      cam.destroy();
+    }
+    this.cameras.delete(name);
+  }
+
   /** Deactivate and destroy a named camera. */
   destroy(name: string, ease = false, easeMs = 0): void {
     const cam = this.cameras.get(name);

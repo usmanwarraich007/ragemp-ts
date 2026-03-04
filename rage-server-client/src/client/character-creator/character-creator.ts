@@ -5,9 +5,10 @@
  * Camera logic now lives in src/client/camera/ and can be reused by any feature.
  */
 import type { CharacterAppearance } from '@ragemp/shared';
+import { SELECT_HEADING } from '../character-select/location';
 import {
   charCreatorCamera,
-  stopCreatorCamera,
+  disableOrbit,
   setDragging,
   adjustRadius,
   setLookBone,
@@ -15,7 +16,7 @@ import {
   rotatePolar,
   setPanelHovered,
 } from '../camera';
-import { applyAppearance } from './ped';
+import { applyAppearance, resetAppearance } from './ped';
 
 // ── CEF → Ped live preview ────────────────────────────────────────────────────
 
@@ -83,12 +84,26 @@ mp.events.add('character:setCameraZone', (json: string) => {
 
 export function onCreatorOpen(): void {
   const local = mp.players.local;
+
+  // Reset ALL appearance (clothes, overlays, props, tattoos) — not just components.
+  // setDefaultComponentVariation() alone leaves beard, glasses etc. from the
+  // previously selected character's clothing preview.
+  resetAppearance(local);
+
+  // Must unfreeze before changing heading — GTA ignores heading setter on
+  // a frozen entity. This happens when coming from the char-select screen.
+  local.freezePosition(false);
+  mp.game.entity.setHeading(local.handle, SELECT_HEADING); // same as char-select
   local.freezePosition(true);
-  local.heading = 0;
+
   charCreatorCamera(local);
 }
 
 export function onCreatorClose(): void {
-  stopCreatorCamera();
+  // Stop the orbit render loop only — do NOT destroy the scripted camera.
+  // join-state.ts will activate the char-select cam (scripted→scripted),
+  // then silently destroy this one. If we destroy here first, scriptActive
+  // goes false and causes a gameplay camera flash.
+  disableOrbit();
   mp.players.local.freezePosition(false);
 }

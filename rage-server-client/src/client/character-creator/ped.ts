@@ -76,3 +76,29 @@ export function applyAppearance(p: PlayerMp, a: CharacterAppearance): void {
     mp.game.invoke('0x5F5D1665E352A839', p.handle, colHash, ovHash); // ADD_PED_DECORATION_FROM_HASHES
   }
 }
+
+/**
+ * resetAppearance — brings the ped back to a fully clean slate.
+ *
+ * setDefaultComponentVariation() resets clothing components but leaves
+ * head overlays (beard, eyebrows, makeup) and props (glasses, hat, etc.)
+ * untouched. This function clears those too.
+ */
+export function resetAppearance(p: PlayerMp): void {
+  // Reset clothing components
+  p.setDefaultComponentVariation();
+
+  // Clear all head overlay slots (0–12). 255 = disabled.
+  for (let slot = 0; slot <= 12; slot++) {
+    p.setHeadOverlay(slot, 255, 1.0, 0, 0);
+  }
+
+  // Clear all prop slots used by applyAppearance
+  const propSlots = [0, 1, 2, 6, 7]; // hat, glasses, ear, watch, bracelet
+  for (const slot of propSlots) {
+    p.clearProp(slot);
+  }
+
+  // Clear tattoos
+  p.clearDecorations();
+}

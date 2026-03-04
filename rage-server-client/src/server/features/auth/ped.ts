@@ -62,9 +62,10 @@ export function applyAppearance(p: PlayerMp, a: CharacterAppearance): void {
   p.setClothes(11, a.tops,        a.topsTex,        0);
 
   // ── Props ─────────────────────────────────────────────────────────────────
-  // Server: setProp(slot, drawable, texture) — -1 drawable = clear/none
+  // draw === -1 means "no prop" — pass -1 directly, RAGE:MP clears the slot.
+  // Previously this mapped -1 → 0 which equipped prop index 0 (headset, sunglasses, etc.)
   const setProp = (slot: number, draw: number, tex: number) =>
-    p.setProp(slot, draw === -1 ? 0 : draw, draw === -1 ? 0 : tex);
+    p.setProp(slot, draw, draw === -1 ? 0 : tex);
 
   setProp(0, a.hat,          a.hatTex);
   setProp(1, a.glasses,      a.glassesTex);

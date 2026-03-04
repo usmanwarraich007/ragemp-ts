@@ -9,6 +9,8 @@ import './hud/notification-relay';
 import './hud/hud-cleanup';
 import './rpc/RpcBridge';
 import './character-creator/character-creator'; // registers preview + rotate events
+import './character-select/character-select';   // registers appearance preview for char-select screen
+import './character-select/join-state';          // manages hide/freeze/camera across join → auth → spawn
 import './admin'; // admin dev utilities
 import { browserManager } from './browser';
 import { clientRpc } from './rpc/clientRpc';

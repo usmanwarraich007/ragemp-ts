@@ -8,7 +8,7 @@ export interface ServerRPCs {
 
   // Auth
   'auth:login':    (username: string, password: string) => AuthResult;
-  'auth:register': (username: string, password: string) => AuthResult;
+  'auth:register': (username: string, password: string, email: string) => AuthResult;
 
   // Character
   'character:getList':        () => CharacterSummary[];

@@ -7,6 +7,9 @@ export class Account extends BaseEntity {
   @Column({ type: 'varchar', unique: true, length: 32 })
   username!: string;
 
+  @Column({ type: 'varchar', unique: true, length: 255, nullable: true })
+  email!: string | null;
+
   @Column({ type: 'varchar' })
   passwordHash!: string;
 

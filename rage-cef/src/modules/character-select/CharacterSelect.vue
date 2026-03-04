@@ -1,256 +1,349 @@
 <template>
-  <div class="cs-overlay">
-    <div class="cs-card">
-      <!-- Header -->
-      <div class="cs-header">
-        <h1 class="cs-title">Select Character</h1>
-        <p class="cs-sub">Choose a character to play or create a new one</p>
-      </div>
+  <div class="cs-wrapper">
 
-      <!-- Loading -->
-      <div v-if="loading" class="cs-loading">
-        <div class="spinner" />
-      </div>
+    <div class="right-panel">
+      <div class="section-header">Select Resident</div>
 
-      <!-- Character Grid -->
-      <div v-else class="cs-grid">
+      <!-- Character List -->
+      <div class="character-list">
+        <!-- Loading state -->
+        <template v-if="loading">
+          <div v-for="i in 3" :key="i" class="char-card skeleton">
+            <div class="char-name">——</div>
+            <div class="char-meta">Loading…</div>
+          </div>
+        </template>
+
         <!-- Existing characters -->
-        <div
-          v-for="char in characters"
-          :key="char.id"
-          class="char-card"
-          @click="selectCharacter(char.id)"
-        >
-          <div class="char-avatar">{{ char.firstName[0] }}{{ char.lastName[0] }}</div>
-          <div class="char-info">
-            <div class="char-name">{{ char.firstName }} {{ char.lastName }}</div>
-            <div class="char-meta">{{ char.gender === 'male' ? '♂' : '♀' }} · ${{ char.cash.toLocaleString() }}</div>
-            <div class="char-date">{{ formatDate(char.createdAt) }}</div>
+        <template v-else>
+          <div
+            v-for="char in characters"
+            :key="char.id"
+            :class="['char-card', { active: selectedId === char.id }]"
+            @click="selectChar(char)"
+          >
+            <div class="char-name">{{ char.firstName }}</div>
+            <div class="char-meta">{{ char.gender === 'male' ? 'Male' : 'Female' }} · ${{ char.cash.toLocaleString() }}</div>
           </div>
-        </div>
 
-        <!-- Create new slot -->
-        <div
-          v-if="characters.length < MAX_CHARS"
-          class="char-card create-card"
-          @click="openCreator"
-        >
-          <div class="char-avatar create-icon">+</div>
-          <div class="char-info">
-            <div class="char-name">New Character</div>
-            <div class="char-meta">Slot {{ characters.length + 1 }} / {{ MAX_CHARS }}</div>
+          <!-- Empty slots -->
+          <div
+            v-for="i in emptySlots"
+            :key="'empty-' + i"
+            :class="['char-card', 'empty', { active: selectedId === 'new-' + i }]"
+            @click="openCreator"
+          >
+            <div class="char-name">New</div>
+            <div class="char-meta">Available Identity Slot</div>
           </div>
-        </div>
+        </template>
       </div>
 
-      <!-- Error -->
-      <div v-if="selectError" class="auth-error">{{ selectError }}</div>
+      <!-- Stats Panel (visible when a real character is selected) -->
+      <Transition name="slide-up" mode="out-in">
+        <div v-if="selected && !loading" class="stats-panel" :key="String(selectedId)">
+          <div class="display-fullname">{{ selected.firstName }} {{ selected.lastName }}</div>
+
+          <div class="stat-row">
+            <span class="stat-label">Gender</span>
+            <span class="stat-value">{{ selected.gender === 'male' ? 'Male' : 'Female' }}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Physical Cash</span>
+            <span class="stat-value cash-value">${{ selected.cash.toLocaleString() }}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Bank Savings</span>
+            <span class="stat-value bank-value">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Current Job</span>
+            <span class="stat-value">Unemployed</span>
+          </div>
+
+          <div v-if="selectError" class="cs-error">{{ selectError }}</div>
+
+          <button class="btn-spawn" :disabled="spawning" @click="spawnChar">
+            <span v-if="spawning" class="spinner" />
+            {{ spawning ? 'Waking up…' : 'Wake Up' }}
+          </button>
+        </div>
+      </Transition>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { rpc } from '@/core';
 import type { CharacterSummary } from '@ragemp/shared';
 
 const MAX_CHARS = 3;
 
 const characters = ref<CharacterSummary[]>([]);
-const loading = ref(true);
+const loading    = ref(true);
+const spawning   = ref(false);
 const selectError = ref('');
+const selectedId = ref<number | string | null>(null);
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+const selected = computed(() =>
+  typeof selectedId.value === 'number'
+    ? characters.value.find(c => c.id === selectedId.value) ?? null
+    : null
+);
+
+const emptySlots = computed(() => Math.max(0, MAX_CHARS - characters.value.length));
 
 onMounted(async () => {
   try {
     characters.value = await rpc.callServer('character:getList');
+    // Auto-select first character if any
+    if (characters.value.length > 0) {
+      selectedId.value = characters.value[0].id;
+    }
   } finally {
     loading.value = false;
   }
 });
 
-async function selectCharacter(id: number) {
+// ── Live appearance preview ────────────────────────────────────────────────
+// Whenever the highlighted character changes, push their saved appearance to
+// the client so clothes/hair are applied to mp.players.local in real time.
+watch(selected, (char) => {
+  if (!char?.appearance) return;
+  window.mp?.trigger('character:previewSelected', JSON.stringify(char.appearance));
+}, { immediate: false });
+
+function selectChar(char: CharacterSummary) {
   selectError.value = '';
-  const result = await rpc.callServer('character:select', id);
-  if (!result.success) selectError.value = result.error ?? 'Failed to select character.';
+  selectedId.value  = char.id;
 }
 
 function openCreator() {
   window.mp?.trigger('cmd:showPage', 'character-creator');
 }
+
+async function spawnChar() {
+  if (!selected.value) return;
+  selectError.value = '';
+  spawning.value    = true;
+  try {
+    const result = await rpc.callServer('character:select', selected.value.id);
+    if (!result.success) selectError.value = result.error ?? 'Failed to spawn.';
+  } catch {
+    selectError.value = 'Connection error. Try again.';
+  } finally {
+    spawning.value = false;
+  }
+}
 </script>
 
 <style scoped>
-.cs-overlay {
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@300;400;600&display=swap');
+
+:root {
+  --primary-pink: #ff8fa3;
+  --text-main:    #ffffff;
+  --text-dim:     #a0a0a0;
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Wrapper — single root, transparent ── */
+.cs-wrapper {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 12, 0.88);
-  backdrop-filter: blur(16px);
+  pointer-events: none;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  justify-content: flex-end;
+  /* Matches the reference body gradient exactly */
+  background: linear-gradient(to right, transparent 50%, rgba(0, 0, 0, 0.8) 100%);
+  font-family: 'Inter', sans-serif;
+  color: #fff;
+}
+
+/* ── Right Panel ── */
+.right-panel {
+  width: 480px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 80px 50px;
+  z-index: 10;
   pointer-events: auto;
 }
 
-.cs-card {
-  width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
-  background: rgba(18, 22, 32, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 10px;
-  padding: 36px 32px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+/* ── Section header ── */
+.section-header {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-bottom: 30px;
+  text-transform: uppercase;
 }
 
-/* ── Header ── */
-.cs-header { margin-bottom: 24px; }
-.cs-title { font-size: 22px; font-weight: 700; color: #f0f2f8; margin: 0 0 6px; }
-.cs-sub { font-size: 13px; color: rgba(255,255,255,0.4); margin: 0; }
-
-/* ── Loading ── */
-.cs-loading { display: flex; justify-content: center; padding: 40px 0; }
-
-/* ── Grid ── */
-.cs-grid {
+/* ── Character list ── */
+.character-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 30px;
+  margin-bottom: 40px;
 }
 
-/* ── Character card ── */
 .char-card {
+  cursor: pointer;
+  transition: 0.2s ease;
+  position: relative;
+}
+
+/* Pink active bar — exact from reference */
+.char-card.active::before {
+  content: '';
+  position: absolute;
+  left: -30px;
+  top: 10%;
+  height: 80%;
+  width: 6px;
+  background: var(--primary-pink);
+}
+
+/* Large Oswald character first name */
+.char-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 3.8rem;
+  line-height: 1;
+  text-transform: uppercase;
+  color: white;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
+
+.char-meta {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 5px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Empty slot — ghost outline text */
+.char-card.empty .char-name {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.2);
+}
+.char-card.empty:hover .char-name {
+  color: rgba(255, 255, 255, 0.05);
+}
+
+/* Skeleton shimmer */
+.char-card.skeleton .char-name {
+  color: rgba(255,255,255,0.12);
+  animation: pulse 1.4s ease infinite;
+}
+.char-card.skeleton .char-meta {
+  color: rgba(255,255,255,0.08);
+  animation: pulse 1.4s ease infinite 0.2s;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Stats panel ── */
+.stats-panel {
+  margin-top: auto;
+  background: rgba(15, 15, 15, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 35px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 5px solid var(--primary-pink);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.display-fullname {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.8rem;
+  margin-bottom: 25px;
+  text-transform: uppercase;
+  color: white;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+.stat-row:last-of-type { border-bottom: none; }
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.stat-value   { font-size: 0.9rem; font-weight: 600; color: #fff; }
+.cash-value   { color: #2ecc71; }
+.bank-value   { color: #3498db; }
+
+/* ── Error ── */
+.cs-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 60, 60, 0.12);
+  border: 1px solid rgba(255, 60, 60, 0.28);
+  color: #ff8080;
+  font-size: 0.85rem;
+}
+
+/* ── Spawn button ── */
+.btn-spawn {
+  width: 100%;
+  background: white;
+  color: black;
+  border: none;
+  padding: 18px;
+  margin-top: 20px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.2s;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  justify-content: center;
+  gap: 10px;
 }
-.char-card:hover { background: rgba(68, 102, 255, 0.1); border-color: rgba(68,102,255,0.3); }
-
-.char-avatar {
-  width: 44px; height: 44px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #4466ff, #8844ff);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  letter-spacing: -1px;
+.btn-spawn:hover:not(:disabled) {
+  background: var(--primary-pink);
+  color: white;
+  transform: translateY(-2px);
 }
+.btn-spawn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.create-card .char-avatar.create-icon {
-  background: rgba(255,255,255,0.06);
-  font-size: 22px;
-  color: rgba(255,255,255,0.4);
-}
-
-.char-name { font-size: 15px; font-weight: 600; color: #f0f2f8; }
-.char-meta { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 3px; }
-.char-date { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 2px; }
-
-/* ── Create form ── */
-.create-form {
-  border-top: 1px solid rgba(255,255,255,0.07);
-  padding-top: 20px;
-  margin-top: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.create-row { display: flex; gap: 12px; }
-.create-field { flex: 1; }
-
-.field-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  margin-top: 14px;
-}
-
-.field-input {
-  width: 100%;
-  padding: 10px 13px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  color: #f0f2f8;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.15s;
-  box-sizing: border-box;
-}
-.field-input:focus { border-color: rgba(68, 102, 255, 0.6); }
-.field-input::placeholder { color: rgba(255,255,255,0.2); }
-
-.gender-row { display: flex; gap: 10px; margin-top: 14px; }
-.gender-btn {
-  flex: 1;
-  padding: 9px;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.45);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.gender-btn.active { background: rgba(68,102,255,0.15); border-color: rgba(68,102,255,0.4); color: #8899ff; }
-
-.auth-error {
-  margin-top: 12px;
-  padding: 9px 12px;
-  border-radius: 6px;
-  background: rgba(255, 60, 60, 0.12);
-  border: 1px solid rgba(255, 60, 60, 0.25);
-  color: #ff8080;
-  font-size: 13px;
-}
-
-.submit-btn {
-  margin-top: 18px;
-  width: 100%;
-  padding: 11px;
-  border: none;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #4466ff, #6644ff);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: opacity 0.15s, transform 0.1s;
-}
-.submit-btn:hover:not(:disabled) { opacity: 0.88; }
-.submit-btn:active:not(:disabled) { transform: scale(0.98); }
-.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
+/* ── Spinner ── */
 .spinner {
   width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
+  border: 2px solid rgba(0,0,0,0.3);
+  border-top-color: #000;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Form transition ── */
-.form-enter-active, .form-leave-active { transition: all 0.2s ease; }
-.form-enter-from, .form-leave-to { opacity: 0; transform: translateY(-8px); }
+/* ── Stats slide-up transition ── */
+.slide-up-enter-active { animation: slideUp 0.5s ease-out; }
+.slide-up-leave-active { animation: slideUp 0.25s ease-out reverse; }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 </style>

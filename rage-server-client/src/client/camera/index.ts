@@ -8,4 +8,4 @@ export { cameraManager }                          from './manager';
 export { enableOrbit, disableOrbit, setDragging, setOrbitTarget, snapOrbitTarget, adjustRadius, rotatePolar, setPanelHovered } from './renderLoop';
 export type { OrbitConfig }                       from './renderLoop';
 export { setLookBone, zoneForTab }                from './boneCamera';
-export { charCreatorCamera, stopCreatorCamera }   from './presets';
+export { charCreatorCamera, stopCreatorCamera, charSelectCamera, stopCharSelectCamera, activateSkyHoldCamera, destroySkyHoldCamera } from './presets';

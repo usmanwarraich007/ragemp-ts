@@ -39,6 +39,16 @@ function hidePage(player: PlayerMp): void {
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
+// Sky holding position — player stays here during auth/character-select
+const SKY_HOLD = { x: -2672.5713, y: 2500.6135, z: 184.9124 };
+
+// On join: tell the client to freeze, hide, and mute the player.
+// We send the sky position so the client can teleport itself — server-side
+// position assignment alone may be overridden by the spawn system.
+mp.events.add('playerJoin', (player: PlayerMp) => {
+  player.call('cmd:holdInSky', [SKY_HOLD.x, SKY_HOLD.y, SKY_HOLD.z]);
+});
+
 // Fires once the client's CEF browser DOM is loaded and ready to receive events
 mp.events.add('client:browserReady', (player: PlayerMp) => {
   const data = playerStore.get(player);
@@ -92,18 +102,25 @@ class AuthFeature {
   }
 
   @Rpc('auth:register')
-  static async register(player: PlayerMp, username: string, password: string): Promise<AuthResult> {
+  static async register(player: PlayerMp, username: string, password: string, email: string): Promise<AuthResult> {
     try {
       if (username.length < 3 || username.length > 32)
         return { success: false, error: 'Username must be 3–32 characters.' };
       if (password.length < 6)
         return { success: false, error: 'Password must be at least 6 characters.' };
 
-      const exists = await Account.findOne({ where: { username } });
-      if (exists) return { success: false, error: 'Username already taken.' };
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!EMAIL_RE.test(email))
+        return { success: false, error: 'Invalid email address.' };
+
+      const existsByName = await Account.findOne({ where: { username } });
+      if (existsByName) return { success: false, error: 'Username already taken.' };
+
+      const existsByEmail = await Account.findOne({ where: { email } });
+      if (existsByEmail) return { success: false, error: 'Email address already in use.' };
 
       const passwordHash = await bcrypt.hash(password, 10);
-      const account = Account.create({ username, passwordHash });
+      const account = Account.create({ username, email, passwordHash });
       await account.save();
 
       playerStore.patch(player, { account: { id: account.id, username, adminLevel: 0 } });
