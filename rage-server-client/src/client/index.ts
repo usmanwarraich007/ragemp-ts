@@ -3,7 +3,6 @@ import './interaction/MarkerSystem';    // standalone world marker renderer
 import './vehicles/vehicle-bone-hud';   // all vehicle bone interactables (doors, hood, trunk)
 import './session';                      // stores characterId sent by server on character:select
 import './business';                     // business system — registers handlers for all types
-import './hello-world/hello-world';
 import './hud/vehicle-hud';
 import './hud/notification-relay';
 import './hud/hud-cleanup';
@@ -13,8 +12,8 @@ import './character-select/character-select';   // registers appearance preview 
 import './character-select/join-state';          // manages hide/freeze/camera across join → auth → spawn
 import './admin'; // admin dev utilities
 import { browserManager } from './browser';
-import { clientRpc } from './rpc/clientRpc';
 import { onCreatorOpen, onCreatorClose } from './character-creator/character-creator';
+
 
 const IS_DEV = false;
 const CEF_URL = IS_DEV
@@ -43,12 +42,4 @@ mp.events.add('cmd:hidePage', () => {
   onCreatorClose();
 });
 
-// ── Commands ──────────────────────────────────────────────────────────────────
 
-mp.events.add('cmd:tpm', async () => {
-  const blip = mp.game.ui.getFirstBlipInfoId(8);
-  const x = mp.game.ui.doesBlipExist(blip) ? mp.game.ui.getBlipCoords(blip).x : 0;
-  const y = mp.game.ui.doesBlipExist(blip) ? mp.game.ui.getBlipCoords(blip).y : 0;
-  const z = mp.game.ui.doesBlipExist(blip) ? mp.game.ui.getBlipCoords(blip).z : 0;
-  await clientRpc.callServer('tpm:teleport', x, y, z);
-});

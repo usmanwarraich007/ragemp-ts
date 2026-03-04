@@ -18,8 +18,5 @@ mp.events.add('packagesLoaded', async () => {
   await initDatabase();
 });
 
-// ── Commands ───────────────────────────────────────────────────────────────
-import './commands';
-
 // ── Features ───────────────────────────────────────────────────────────────
 import './features';

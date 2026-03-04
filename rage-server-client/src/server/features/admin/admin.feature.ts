@@ -4,7 +4,7 @@
  * All commands require adminLevel >= 1 unless noted.
  * Use /setadmin [id] [level] (adminLevel 5+) to promote accounts.
  */
-import { Command } from '../../core/Command';
+import { Command, Rpc, notify } from '../../core';
 import { playerStore } from '../../core/playerStore';
 import { log } from '../../core/logger';
 
@@ -25,6 +25,7 @@ class AdminCommands {
     const pos  = player.position;
     const veh  = mp.vehicles.new(hash, pos, {
       heading:   player.heading,
+      numberPlate: 'ADMIN',
       dimension: player.dimension,
     });
 
@@ -82,6 +83,21 @@ class AdminCommands {
     target.position = player.position;
     target.outputChatBox(`!{FFAA00}You were teleported by an admin.`);
     player.outputChatBox(`!{00FF88}Brought ${target.name} to you.`);
+  }
+
+  @Command('tpm', { adminLevel: 1 })
+  static toWaypoint(player: PlayerMp): void {
+    player.call('cmd:tpm');
+  }
+
+  @Rpc('tpm:teleport')
+  static teleport(player: PlayerMp, x: number, y: number, z: number): void {
+    if (x === 0 && y === 0) {
+      notify(player).error('No waypoint set. Place a marker on the map first.');
+      return;
+    }
+    player.position = new mp.Vector3(x, y, z + 1.5);
+    notify(player).success('Teleported to waypoint.');
   }
 
   // ── God mode ─────────────────────────────────────────────────────────────

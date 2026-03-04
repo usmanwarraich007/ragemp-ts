@@ -8,3 +8,4 @@ import './god';
 import './freeze';
 import './skin';
 import './clipboard';
+import './teleport';

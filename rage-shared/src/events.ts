@@ -4,6 +4,7 @@
 
 import type { SpeedometerData, AreaData, InteractButton } from './types/hud';
 import type { PlayerStats } from './types/player';
+import type { BusinessDto } from './types/business';
 
 export interface NotificationPayload {
   type: 'success' | 'error' | 'info' | 'warning';
@@ -34,6 +35,16 @@ export interface CefEventMap {
   // Player
   'player:setStats': PlayerStats;
   'player:setDead': boolean;
+
+  // Business — server → client broadcasts
+  /** Full initial sync sent to a client when they spawn into the world. */
+  'business:sync':   string; // JSON-serialised BusinessDto[]
+  /** A new business was created; add it to the local store. */
+  'business:add':    string; // JSON-serialised BusinessDto
+  /** An existing business changed state (open/closed, owner, balance). */
+  'business:update': string; // JSON-serialised BusinessDto
+  /** A business was deleted; remove it from the local store. */
+  'business:remove': number; // businessId
 }
 
 // Helper type: get payload type for a given event key

@@ -9,6 +9,7 @@ BugTrap-x64.dll
 linux_x64.tar.gz
 ragemp-server.exe
 reference_project/
+docs/
 
 # node
 node_modules/

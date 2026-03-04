@@ -55,7 +55,7 @@ class BusinessFeature {
       notify(player).screen.error('Business not found.');
       return { isOpen: false };
     }
-    if (b.ownerId !== charId && !(player as any).isAdmin) {
+    if (b.ownerId !== charId && !(playerStore.get(player).account?.adminLevel ?? 0 > 0)) {
       notify(player).screen.error('You do not own this business.');
       return { isOpen: b.isOpen };
     }

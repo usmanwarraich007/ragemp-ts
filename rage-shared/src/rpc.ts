@@ -32,5 +32,8 @@ export interface ServerRPCs {
   'dealership:restock':    (businessId: number, itemKey: string, quantity: number, purchasePrice: number) => { ok: boolean };
 }
 
-// Client/CEF-side procedures (Server → CEF)
+// Client/CEF-side procedures (Server → CEF, initiated by the server)
+// Add entries here as server-push RPCs are needed.
+// Example:
+//   'bank:balanceUpdated': (newBalance: number) => void;
 export interface ClientRPCs {}

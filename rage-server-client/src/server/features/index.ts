@@ -9,5 +9,5 @@ import './business/business.feature';
 import './business/business.commands';
 import './business/dealership.feature';
 
-// Remove when replacing with real features:
-import '../hello-world/hello-world';
+// Dev/debug utilities — remove or gate before going live:
+import './dev/debug.commands';
