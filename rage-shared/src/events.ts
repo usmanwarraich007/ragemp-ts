@@ -4,7 +4,7 @@
 
 import type { SpeedometerData, AreaData, InteractButton } from './types/hud';
 import type { PlayerStats } from './types/player';
-import type { BusinessDto } from './types/business';
+import type { BusinessDto, DealershipStockItemDto, DealershipManageDto } from './types/business';
 
 export interface NotificationPayload {
   type: 'success' | 'error' | 'info' | 'warning';
@@ -45,6 +45,12 @@ export interface CefEventMap {
   'business:update': string; // JSON-serialised BusinessDto
   /** A business was deleted; remove it from the local store. */
   'business:remove': number; // businessId
+
+  // Dealership — server pushes data then shows page
+  /** Sent to customer before showing dealership-browse page. */
+  'dealership:openBrowse': { businessId: number; name: string; stock: DealershipStockItemDto[] };
+  /** Sent to dealership owner before showing dealership-manage page. */
+  'dealership:openManage': DealershipManageDto;
 }
 
 // Helper type: get payload type for a given event key

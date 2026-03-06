@@ -148,6 +148,7 @@ export interface CharacterSummary {
   lastName: string;
   gender: 'male' | 'female';
   cash: number;
+  bank: number;
   createdAt: string;
   appearance: CharacterAppearance | null;
 }

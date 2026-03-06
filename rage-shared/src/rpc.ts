@@ -1,5 +1,6 @@
 import type { AuthResult, CharacterSummary, CharacterAppearance } from './types/auth';
-import type { BusinessDto, BusinessInventoryItemDto } from './types/business';
+import type { BusinessDto, BusinessInventoryItemDto, VehicleModelConfigDto, DealershipStockItemDto, DealershipManageDto } from './types/business';
+import type { PlayerVehicleDto } from './types/vehicle';
 
 // Server-side procedures (CEF/Client → Server)
 export interface ServerRPCs {
@@ -25,11 +26,26 @@ export interface ServerRPCs {
   'business:transfer':(businessId: number, targetCharacterId: number) => { ok: boolean };
   'business:withdraw':(businessId: number, amount: number) => { balance: number };
 
-  // Dealership
-  'dealership:getStock':   (businessId: number) => BusinessInventoryItemDto[];
-  'dealership:buyVehicle': (businessId: number, itemKey: string) => { ok: boolean; message?: string };
-  'dealership:setPrice':   (businessId: number, itemKey: string, price: number) => { ok: boolean };
-  'dealership:restock':    (businessId: number, itemKey: string, quantity: number, purchasePrice: number) => { ok: boolean };
+  // Vehicle Catalog (admin)
+  'vcat:list':   () => VehicleModelConfigDto[];
+  'vcat:upsert': (entry: VehicleModelConfigDto) => { ok: boolean };
+  'vcat:delete': (model: string) => { ok: boolean };
+
+  // Player Vehicles
+  'vehicle:myVehicles': () => PlayerVehicleDto[];
+
+  // Dealership — customer
+  'dealership:getStock':      (businessId: number) => DealershipStockItemDto[];
+  'dealership:buyVehicle':    (businessId: number, itemKey: string, colorHex: string) => { ok: boolean; message?: string };
+  'dealership:enterShowcase': (businessId: number) => { ok: boolean };
+  'dealership:changePreview': (model: string, colorHex: string) => void;
+  'dealership:exitShowcase':  () => void;
+
+  // Dealership — owner management
+  'dealership:getManageData': (businessId: number) => DealershipManageDto;
+  'dealership:restock':       (businessId: number, itemKey: string, qty: number, purchasePrice: number) => { ok: boolean };
+  'dealership:setPrice':      (businessId: number, itemKey: string, price: number) => { ok: boolean };
+  'dealership:removeItem':    (businessId: number, itemKey: string) => { ok: boolean };
 }
 
 // Client/CEF-side procedures (Server → CEF, initiated by the server)

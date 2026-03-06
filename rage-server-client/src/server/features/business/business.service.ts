@@ -105,7 +105,7 @@ export async function findOwnedBy(
   characterId: number,
 ): Promise<Business | null> {
   const b = await findById(businessId);
-  return b?.ownerId === characterId ? b : null;
+  return b && Number(b.ownerId) === characterId ? b : null;
 }
 
 // ── Mutations ─────────────────────────────────────────────────────────────────

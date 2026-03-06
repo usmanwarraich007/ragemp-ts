@@ -24,6 +24,7 @@ function toSummary(c: Character): CharacterSummary {
     lastName: c.lastName,
     gender: c.gender,
     cash: c.cash,
+    bank: c.bank,
     createdAt: c.createdAt.toISOString(),
     appearance: c.appearance ?? null,
   };

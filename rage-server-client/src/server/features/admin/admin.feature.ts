@@ -7,6 +7,8 @@
 import { Command, Rpc, notify } from '../../core';
 import { playerStore } from '../../core/playerStore';
 import { log } from '../../core/logger';
+import { Character } from '../auth/character.entity';
+import * as bizSvc from '../business/business.service';
 
 // Track last spawned vehicle per player for /dv
 const lastVehicle = new Map<number, VehicleMp>();
@@ -60,7 +62,21 @@ class AdminCommands {
     player.outputChatBox('!{00FF88}Vehicle repaired.');
   }
 
-  // ── Teleport ─────────────────────────────────────────────────────────────
+  // ── Teleport ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  @Command('tpc', { usage: '/tpc [x] [y] [z]', minArgs: 3, adminLevel: 1 })
+  static teleportToCoords(player: PlayerMp, x: string, y: string, z: string): void {
+    const px = parseFloat(x);
+    const py = parseFloat(y);
+    const pz = parseFloat(z);
+    if ([px, py, pz].some(isNaN)) {
+      player.outputChatBox('!{FF4444}Invalid coordinates. Usage: /tpc [x] [y] [z]');
+      return;
+    }
+    player.position = new mp.Vector3(px, py, pz + 0.5);
+    player.outputChatBox(`!{00FF88}Teleported to ${px.toFixed(2)}, ${py.toFixed(2)}, ${pz.toFixed(2)}`);
+    log.info('[Admin]', `${player.name} teleported to coords ${px}, ${py}, ${pz}`);
+  }
 
   @Command('tp', { usage: '/tp [id]', minArgs: 1, adminLevel: 1 })
   static teleportTo(player: PlayerMp, targetId: string): void {
@@ -168,17 +184,71 @@ class AdminCommands {
   }
 
   @Command('givecash', { usage: '/givecash [id] [amount]', minArgs: 2, adminLevel: 1 })
-  static giveCash(player: PlayerMp, targetId: string, amount: string): void {
+  static async giveCash(player: PlayerMp, targetId: string, amount: string): Promise<void> {
     const target = mp.players.at(parseInt(targetId));
     if (!target || !mp.players.exists(target)) {
       player.outputChatBox('!{FF4444}Player not found.');
       return;
     }
     const amt = parseInt(amount);
-    if (isNaN(amt) || amt <= 0) { player.outputChatBox('!{FF4444}Invalid amount.'); return; }
-    target.outputChatBox(`!{00FF88}You received $${amt.toLocaleString()} from an admin.`);
-    player.outputChatBox(`!{00FF88}Gave $${amt.toLocaleString()} to ${target.name}.`);
-    log.info('[Admin]', `${player.name} gave $${amt} to ${target.name}`);
+    if (isNaN(amt)) { player.outputChatBox('!{FF4444}Invalid amount.'); return; }
+
+    const data = playerStore.get(target);
+    if (!data.character?.id) {
+      player.outputChatBox('!{FF4444}Target has no active character.');
+      return;
+    }
+
+    const newCash = Math.max(0, (data.character.cash ?? 0) + amt);
+    await Character.update(data.character.id, { cash: newCash });
+    // Update in-memory so HUD reflects immediately
+    playerStore.patch(target, { character: { ...data.character, cash: newCash } });
+
+    target.outputChatBox(`!{00FF88}An admin gave you $${amt.toLocaleString()} cash. Balance: $${newCash.toLocaleString()}`);
+    player.outputChatBox(`!{00FF88}Gave $${amt.toLocaleString()} cash to ${target.name}. New balance: $${newCash.toLocaleString()}`);
+    log.info('[Admin]', `${player.name} gave $${amt} cash to ${target.name} (char#${data.character.id})`);
+  }
+
+  @Command('givebank', { usage: '/givebank [id] [amount]', minArgs: 2, adminLevel: 1 })
+  static async giveBank(player: PlayerMp, targetId: string, amount: string): Promise<void> {
+    const target = mp.players.at(parseInt(targetId));
+    if (!target || !mp.players.exists(target)) {
+      player.outputChatBox('!{FF4444}Player not found.');
+      return;
+    }
+    const amt = parseInt(amount);
+    if (isNaN(amt)) { player.outputChatBox('!{FF4444}Invalid amount.'); return; }
+
+    const data = playerStore.get(target);
+    if (!data.character?.id) {
+      player.outputChatBox('!{FF4444}Target has no active character.');
+      return;
+    }
+
+    const newBank = Math.max(0, (data.character.bank ?? 0) + amt);
+    await Character.update(data.character.id, { bank: newBank });
+    playerStore.patch(target, { character: { ...data.character, bank: newBank } });
+
+    target.outputChatBox(`!{00FF88}An admin added $${amt.toLocaleString()} to your bank. Balance: $${newBank.toLocaleString()}`);
+    player.outputChatBox(`!{00FF88}Added $${amt.toLocaleString()} bank to ${target.name}. New balance: $${newBank.toLocaleString()}`);
+    log.info('[Admin]', `${player.name} gave $${amt} bank to ${target.name} (char#${data.character.id})`);
+  }
+
+  @Command('givebiz', { usage: '/givebiz [businessId] [amount]', minArgs: 2, adminLevel: 1 })
+  static async giveBiz(player: PlayerMp, bizIdStr: string, amountStr: string): Promise<void> {
+    const bizId = parseInt(bizIdStr);
+    const amt   = parseInt(amountStr);
+    if (isNaN(bizId) || isNaN(amt)) { player.outputChatBox('!{FF4444}Invalid args.'); return; }
+
+    const b = await bizSvc.findById(bizId);
+    if (!b) { player.outputChatBox(`!{FF4444}Business #${bizId} not found.`); return; }
+
+    const old = Number(b.balance);
+    b.balance  = old + amt;
+    await b.save();
+
+    player.outputChatBox(`!{00FF88}Business #${bizId} (${b.name}) balance: $${old.toLocaleString()} → $${b.balance.toLocaleString()}`);
+    log.info('[Admin]', `${player.name} set business #${bizId} balance to $${b.balance}`);
   }
 
   @Command('skin', { usage: '/skin [model]', minArgs: 1, adminLevel: 1 })

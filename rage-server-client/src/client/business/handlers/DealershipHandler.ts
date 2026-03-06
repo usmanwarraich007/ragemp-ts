@@ -13,6 +13,8 @@
 import { BusinessHandler }  from '../BusinessHandler';
 import { registry, markerSystem } from '../../interaction';
 import { clientRpc }         from '../../rpc/clientRpc';
+import { browserManager }    from '../../browser';
+import { enterShowcase }     from './dealership-preview.client';
 import type { BusinessDto }  from '@ragemp/shared';
 
 export class DealershipHandler extends BusinessHandler {
@@ -134,9 +136,14 @@ export class DealershipHandler extends BusinessHandler {
 
   private onCustomerAction(action: string): void {
     switch (action) {
-      case 'customer:browse':
-        mp.gui.chat.push('!{44AAFF}[Dealership] Opening browse UI… (CEF: dealership-browse)');
+      case 'customer:browse': {
+        // Enter showcase first (spawns preview vehicle, saves position),
+        // then open the browse UI once the server confirms.
+        void enterShowcase(this.data.id).then((ok) => {
+          if (ok) browserManager.show('dealership-browse', { businessId: this.data.id, name: this.data.name });
+        });
         break;
+      }
       case 'customer:test':
         mp.gui.chat.push('!{44AAFF}[Dealership] Test drive — not yet implemented.');
         break;
@@ -152,16 +159,16 @@ export class DealershipHandler extends BusinessHandler {
           ));
         break;
       case 'owner:stock':
-        mp.gui.chat.push('!{44AAFF}[Dealership] Opening stock UI… (CEF: dealership-manage)');
+        browserManager.show('dealership-manage', { businessId: this.data.id });
         break;
       case 'owner:restock':
-        mp.gui.chat.push('!{44AAFF}[Dealership] Restock UI — not yet implemented.');
+        mp.gui.chat.push('!{44AAFF}[Dealership] Use the Manage Dealership menu to restock.');
         break;
       case 'owner:pricing':
-        mp.gui.chat.push('!{44AAFF}[Dealership] Pricing UI — not yet implemented.');
+        mp.gui.chat.push('!{44AAFF}[Dealership] Use the Manage Dealership menu to set prices.');
         break;
       case 'owner:balance':
-        mp.gui.chat.push('!{44AAFF}[Dealership] Balance — not yet implemented.');
+        mp.gui.chat.push('!{44AAFF}[Dealership] Balance shown in the Manage Dealership UI.');
         break;
     }
   }

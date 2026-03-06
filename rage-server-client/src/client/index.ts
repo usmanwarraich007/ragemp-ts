@@ -1,6 +1,7 @@
 import './interaction/InteractionMenu'; // menu draw engine — must load before registry
 import './interaction/MarkerSystem';    // standalone world marker renderer
 import './vehicles/vehicle-bone-hud';   // all vehicle bone interactables (doors, hood, trunk)
+import './vehicles/vehicle-stream';     // applies saved visuals (colors, mods, neon) on stream-in
 import './session';                      // stores characterId sent by server on character:select
 import './business';                     // business system — registers handlers for all types
 import './hud/vehicle-hud';
@@ -15,7 +16,7 @@ import { browserManager } from './browser';
 import { onCreatorOpen, onCreatorClose } from './character-creator/character-creator';
 
 
-const IS_DEV = false;
+const IS_DEV = true;
 const CEF_URL = IS_DEV
   ? 'http://localhost:5173'
   : 'package://cef/index.html';
@@ -41,5 +42,4 @@ mp.events.add('cmd:hidePage', () => {
   browserManager.hide();
   onCreatorClose();
 });
-
 
