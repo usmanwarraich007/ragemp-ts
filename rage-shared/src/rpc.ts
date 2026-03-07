@@ -18,7 +18,12 @@ export interface ServerRPCs {
   'character:saveAppearance': (characterId: number, appearance: CharacterAppearance) => AuthResult;
 
   // Vehicles — all door/trunk toggling goes through one RPC (doorIndex 5 = trunk)
-  'vehicle:door:toggle': (vehicleRemoteId: number, doorIndex: number) => { isOpen: boolean };
+  // currentlyOpen = actual door angle state read on the client via getDoorAngleRatio
+  'vehicle:door:toggle': (vehicleRemoteId: number, doorIndex: number, currentlyOpen: boolean) => { isOpen: boolean };
+
+  // Vehicle state — engine + lock (initiated by key bindings on the client)
+  'vehicle:setEngine':   (vehicleRemoteId: number, on: boolean) => { ok: boolean };
+  'vehicle:toggleLock':  (vehicleRemoteId: number) => { locked: boolean };
 
   // Business — core
   'business:getAll':  () => BusinessDto[];

@@ -4,6 +4,8 @@ import { Account } from './account.entity';
 import { Character } from './character.entity';
 import { applyAppearance } from './ped';
 import { syncPlayerWorld } from '../business/business.feature';
+import { vehicleManager } from '../vehicles/vehicle-manager.server';
+import { findByCharacter } from '../vehicles/player-vehicle.service';
 import type { AuthResult, CharacterSummary, CharacterAppearance } from '@ragemp/shared';
 
 const MAX_CHARACTERS = 3;
@@ -245,6 +247,28 @@ class AuthFeature {
 
     // Sync world data to the newly spawned character
     void syncPlayerWorld(player);
+
+    // ── Auto-spawn unparked vehicles ────────────────────────────────────────
+    // Any vehicle with isParked=false was left on the map before disconnect.
+    // Respawn it at its last saved position so the world stays consistent.
+    void (async () => {
+      try {
+        const vehicles = await findByCharacter(character.id);
+        let spawned = 0;
+        for (const v of vehicles) {
+          if (v.isParked || v.impounded) continue;          // parked/impounded = not on map
+          if (vehicleManager.isLive(v.id)) continue;        // already spawned (shouldn't happen)
+          if (v.parkedX === 0 && v.parkedY === 0) continue; // no saved position yet
+          vehicleManager.spawn(v);
+          spawned++;
+        }
+        if (spawned > 0) {
+          log.info('[Auth]', `Auto-spawned ${spawned} vehicle(s) for ${charName}`);
+        }
+      } catch (err) {
+        log.error('[Auth]', 'Failed to auto-spawn vehicles for character', err);
+      }
+    })();
 
     return { success: true };
   }

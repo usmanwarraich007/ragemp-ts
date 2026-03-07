@@ -79,6 +79,13 @@ function makeBoneInteractable(vehicle: VehicleMp, cfg: BoneConfig) {
       catch { return null; }
     },
 
+    // ── Lock gate: all vehicle parts (doors, hood, trunk) require unlock ────
+    canInteract(): boolean | string {
+      const locked = vehicle.getVariable('locked') as boolean | undefined;
+      if (locked) return 'Vehicle is locked.';
+      return true;
+    },
+
     items,
 
     onSelect(action: string): void {
@@ -90,6 +97,7 @@ function makeBoneInteractable(vehicle: VehicleMp, cfg: BoneConfig) {
                 'vehicle:door:toggle',
                 vehicle.remoteId,
                 cfg.doorIndex,
+                isDoorOpen(vehicle, cfg.doorIndex), // actual native state — server inverts this
               );
               mp.gui.chat.push(
                 res.isOpen

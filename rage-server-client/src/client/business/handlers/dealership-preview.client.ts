@@ -16,6 +16,17 @@ import { clientRpc } from '../../rpc/clientRpc';
 // Track whether the local player is currently in a dealership preview session
 let isInPreview = false;
 
+/** Returns true while the player is in a dealership vehicle preview session. */
+export function isShowcasing(): boolean { return isInPreview; }
+
+// ── Block F (exit-vehicle) every frame while in preview ───────────────────────
+// GTA control 75 = INPUT_ENTER_EXIT_VEHICLE. disableControlAction is single-frame
+// so it must be called inside render to suppress it continuously.
+mp.events.add('render', () => {
+  if (!isInPreview) return;
+  mp.game.controls.disableControlAction(0, 75, true);
+});
+
 // ── CEF → Client event handlers ───────────────────────────────────────────────
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -36,26 +47,20 @@ mp.events.add('dealership:exitPreview', () => {
 });
 
 /**
- * Server sends this after putIntoVehicle(preview) or before releasing the player.
- * Freeze = true:  lock position + kill engine so player can't drive or exit.
- * Freeze = false: restore movement (called on close / purchase).
- * When freeze=true, colorHex is passed to apply the color immediately via native
- * (setVariable + entityStreamIn can race against the vehicle becoming available).
+ * Server sends this when the preview vehicle is ready (freeze=true) or released (freeze=false).
+ * Toggling isInPreview is enough — the render loop handles blocking F every frame.
+ * When freeze=true, colorHex is applied directly via native to avoid stream-in race.
  */
 mp.events.add('dealership:previewFreeze', (freeze: boolean, colorHex?: string) => {
-  const local = mp.players.local;
-  local.freezePosition(freeze);
-  if (freeze) {
+  isInPreview = freeze;
+  if (freeze && colorHex) {
     // Short delay so the vehicle entity is fully streamed-in before we touch it
     setTimeout(() => {
-      const veh = local.vehicle;
+      const veh = mp.players.local.vehicle;
       if (!veh) return;
-      veh.setEngineOn(false, true, false);
-      if (colorHex) {
-        const [r, g, b] = hexToRgb(colorHex);
-        veh.setCustomPrimaryColour(r, g, b);
-        veh.setCustomSecondaryColour(r, g, b);
-      }
+      const [r, g, b] = hexToRgb(colorHex);
+      veh.setCustomPrimaryColour(r, g, b);
+      veh.setCustomSecondaryColour(r, g, b);
     }, 400);
   }
 });

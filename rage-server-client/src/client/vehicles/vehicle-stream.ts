@@ -29,6 +29,15 @@ mp.events.add('entityStreamIn', (entity: EntityMp) => {
   const dbId = vehicle.getVariable('dbId') as number | undefined;
   if (!dbId) return;
 
+  // ── Door breakability guard (from reference) ──────────────────────────────
+  // On stream-in GTA's physics can cause doors to pop off. Mark them unbreakable
+  // for 1.5 s while the vehicle settles, then restore normal breakability.
+  for (let i = 0; i < 8; i++) vehicle.setDoorBreakable(i, false);
+  setTimeout(() => {
+    if (mp.vehicles.exists(vehicle)) {
+      for (let i = 0; i < 8; i++) vehicle.setDoorBreakable(i, true);
+    }
+  }, 1500);
   // ── Custom RGB colors ─────────────────────────────────────────────────────
   const primaryHex   = vehicle.getVariable('colorPrimary')   as string | undefined;
   const secondaryHex = vehicle.getVariable('colorSecondary') as string | undefined;
@@ -84,4 +93,22 @@ mp.events.add('entityStreamIn', (entity: EntityMp) => {
       // Malformed mods JSON — skip silently
     }
   }
+
+  // ── Engine state (default OFF — must be started manually) ────────────────
+  // If the variable is explicitly true the engine was already running; otherwise off.
+  const engineOn = vehicle.getVariable('engineOn') as boolean | undefined;
+  const isOn = engineOn === true;
+  vehicle.setEngineOn(isOn, true, false);
+  vehicle.setUndriveable(!isOn); // match reference: undriveable when engine off
+  vehicle.setLights(!isOn ? 1 : 0);
+
+  // ── Dirt level (0.0 = clean → 15.0 = filthy) ─────────────────────────────
+  const dirt = vehicle.getVariable('dirt') as number | undefined;
+  if (dirt !== undefined && dirt > 0) vehicle.setDirtLevel(dirt);
+
+  // ── Health ────────────────────────────────────────────────────────────────
+  const engineHealth = vehicle.getVariable('engineHealth') as number | undefined;
+  const bodyHealth   = vehicle.getVariable('bodyHealth')   as number | undefined;
+  if (engineHealth !== undefined) vehicle.setEngineHealth(engineHealth);
+  if (bodyHealth   !== undefined) vehicle.setBodyHealth(bodyHealth);
 });

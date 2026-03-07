@@ -2,6 +2,7 @@ import './interaction/InteractionMenu'; // menu draw engine — must load before
 import './interaction/MarkerSystem';    // standalone world marker renderer
 import './vehicles/vehicle-bone-hud';   // all vehicle bone interactables (doors, hood, trunk)
 import './vehicles/vehicle-stream';     // applies saved visuals (colors, mods, neon) on stream-in
+import './vehicles/vehicle-controls.client'; // engine (↑/↓) + lock (K) key bindings
 import './session';                      // stores characterId sent by server on character:select
 import './business';                     // business system — registers handlers for all types
 import './hud/vehicle-hud';

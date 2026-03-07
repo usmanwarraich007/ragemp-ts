@@ -62,8 +62,9 @@ class VehicleManagerClass {
     vehicle.setVariable('dbId',   dbVehicle.id);
 
     // State (HUD + lock)
-    vehicle.setVariable('fuel',   dbVehicle.fuel);
-    vehicle.setVariable('locked', dbVehicle.isLocked);
+    vehicle.setVariable('fuel',     dbVehicle.fuel);
+    vehicle.setVariable('locked',   dbVehicle.isLocked);
+    vehicle.setVariable('engineOn', false); // always starts off — driver must start manually
 
     // Visuals — client applies these via natives in entityStreamIn
     vehicle.setVariable('colorPrimary',   dbVehicle.colorPrimary);   // hex
@@ -153,6 +154,55 @@ class VehicleManagerClass {
   setVisual(dbId: number, key: string, value: unknown): void {
     const vehicle = this.byDbId.get(dbId);
     if (vehicle) vehicle.setVariable(key, value);
+  }
+
+  /** Toggle engine state shared variable. */
+  setEngine(dbId: number, on: boolean): void {
+    const vehicle = this.byDbId.get(dbId);
+    if (vehicle) vehicle.setVariable('engineOn', on);
+  }
+
+  /**
+   * Saves the live vehicle's current world position to the DB row without
+   * despawning the entity. Used on player exit and periodic checkpoints.
+   * Does NOT mark the vehicle as parked — it's still active on the map.
+   */
+  async savePosition(vehicleMp: VehicleMp): Promise<void> {
+    const dbVehicle = this.byMpId.get(vehicleMp.id);
+    if (!dbVehicle) return; // unmanaged vehicle
+
+    const pos                 = vehicleMp.position;
+    dbVehicle.parkedX         = pos.x;
+    dbVehicle.parkedY         = pos.y;
+    dbVehicle.parkedZ         = pos.z;
+    dbVehicle.parkedHeading   = vehicleMp.heading;
+    dbVehicle.parkedDimension = vehicleMp.dimension;
+
+    log.info('[VehicleManager]', `Saved position for db#${dbVehicle.id}: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`);
+    await pvSvc.save(dbVehicle);
+  }
+  /** Update dirt level shared variable (0.0 = clean, 15.0 = filthy). */
+  setDirt(dbId: number, level: number): void {
+    const clamped = Math.max(0, Math.min(15, level));
+    const vehicle = this.byDbId.get(dbId);
+    if (vehicle) vehicle.setVariable('dirt', clamped);
+
+    const dbVehicle = vehicle ? this.byMpId.get(vehicle.id) : null;
+    if (dbVehicle) dbVehicle.dirt = clamped;
+  }
+
+  /** Update engine and body health shared variables and in-memory DB row. */
+  setHealth(dbId: number, engineHealth: number, bodyHealth: number): void {
+    const vehicle = this.byDbId.get(dbId);
+    if (vehicle) {
+      vehicle.setVariable('engineHealth', engineHealth);
+      vehicle.setVariable('bodyHealth',   bodyHealth);
+    }
+    const dbVehicle = vehicle ? this.byMpId.get(vehicle.id) : null;
+    if (dbVehicle) {
+      dbVehicle.engineHealth = engineHealth;
+      dbVehicle.bodyHealth   = bodyHealth;
+    }
   }
 }
 

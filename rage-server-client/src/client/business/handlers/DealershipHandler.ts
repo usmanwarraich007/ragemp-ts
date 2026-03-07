@@ -89,25 +89,14 @@ export class DealershipHandler extends BusinessHandler {
       ],
       onSelect: (action) => this.onOwnerAction(action),
     });
-
-    // ── Showcase zone (display-only flat ring) ────────────────────────────
-    const showcasePos = this.zoneVec('showcase', -3, 4);
-    markerSystem.register({
-      id:            this.zoneId('showcase'),
-      type:          36,
-      position:      showcasePos,
-      color:         [255, 255, 255, 60],
-      scale:         2.0,
-      visibleRadius: 20,
-      rotate:        false,
-    });
   }
 
   onUnload(): void {
-    ['customer', 'owner', 'showcase'].forEach((z) => {
+    ['customer', 'owner'].forEach((z) => {
       registry.unregister(this.zoneId(z));
       markerSystem.unregister(this.zoneId(z));
     });
+    registry.unregister(this.zoneId('showcase'));
   }
 
   override onUpdate(patch: Partial<BusinessDto>): boolean {

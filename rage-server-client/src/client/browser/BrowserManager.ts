@@ -57,6 +57,7 @@ class BrowserManager {
    */
   show(page: string, data?: unknown, suppressHud = true): void {
     if (!this.browser) return;
+    this.cursorForced = true;
     this.emit('system', 'setPage', { page, data, suppressHud });
     mp.gui.cursor.show(true, true);
   }
@@ -66,6 +67,7 @@ class BrowserManager {
    */
   hide(): void {
     if (!this.browser) return;
+    this.cursorForced = false;
     this.emit('system', 'setPage', { page: null });
     mp.gui.cursor.show(false, false);
   }

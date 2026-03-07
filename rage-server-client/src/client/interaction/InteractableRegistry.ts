@@ -42,6 +42,8 @@ function resolveItems(
 class InteractableRegistry {
   private readonly items = new Map<string, WorldInteractable>();
   private targeted: WorldInteractable | null = null;
+  /** Cached result of the last canInteract() call — used to detect changes. */
+  private lastCanInteract: boolean | string = true;
 
   constructor() {
     mp.events.add('render', () => this.onRender());
@@ -77,6 +79,16 @@ class InteractableRegistry {
       this.targeted = null;
       this.syncMenu(null);
     }
+  }
+
+  /**
+   * Force the currently targeted item to re-run canInteract() and re-sync
+   * the menu immediately — without waiting for the target to change.
+   * Call this when a variable that affects canInteract() changes externally
+   * (e.g. vehicle locked state toggled while the player is looking at a door).
+   */
+  invalidate(): void {
+    this.syncMenu(this.targeted);
   }
 
   // ── Render loop ─────────────────────────────────────────────────────────────
@@ -134,10 +146,19 @@ class InteractableRegistry {
     // ── 4. Reticle ─────────────────────────────────────────────────────────
     if (newTargeted) mp.game.ui.showHudComponentThisFrame(14);
 
-    // ── 5. Sync menu if target changed ─────────────────────────────────────
+    // ── 5. Sync menu if target changed OR canInteract result changed ───────────
     if (newTargeted !== this.targeted) {
+      // Target changed — full re-sync
       this.targeted = newTargeted;
       this.syncMenu(this.targeted);
+    } else if (newTargeted?.canInteract) {
+      // Same target — re-evaluate canInteract every frame to catch state changes
+      // (e.g. vehicle locked remotely, business closed, player condition changed).
+      // syncMenu is only called when the result actually flips, so overhead is minimal.
+      const result = newTargeted.canInteract();
+      if (result !== this.lastCanInteract) {
+        this.syncMenu(this.targeted);
+      }
     }
 
     // ── 6. Draw proximity labels ───────────────────────────────────────────
@@ -173,17 +194,24 @@ class InteractableRegistry {
   // ── Menu bridge ────────────────────────────────────────────────────────────
 
   private syncMenu(item: WorldInteractable | null): void {
-    if (!item) { interactionMenu.setActive(null); return; }
+    if (!item) {
+      this.lastCanInteract = true;
+      interactionMenu.setActive(null);
+      return;
+    }
 
-    // Check canInteract gate
+    // Check canInteract gate and cache the result
     if (item.canInteract) {
       const result = item.canInteract();
+      this.lastCanInteract = result;
       if (result !== true) {
         // Blocked — show message if reason string provided
         if (typeof result === 'string') mp.gui.chat.push(`!{FF6644}${result}`);
         interactionMenu.setActive(null);
         return;
       }
+    } else {
+      this.lastCanInteract = true;
     }
 
     interactionMenu.setActive({

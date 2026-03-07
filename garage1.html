@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Eclipse Roleplay | Garage Menu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+      :root {
+        --accent-white: #ffffff;
+        --text-main: #ffffff;
+        --text-dim: #a0a0a0;
+        --border-color: rgba(255, 255, 255, 0.1);
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background-color: transparent; 
+        color: var(--text-main);
+        font-family: 'Inter', sans-serif;
+        height: 100vh;
+        display: flex;
+        justify-content: flex-end; 
+        /* Right-side fade effect consistent with character and dealership UI */
+        background: linear-gradient(to left, rgba(0,0,0,0.9) 0%, transparent 40%);
+      }
+
+      .side-panel {
+        width: 480px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between; 
+        padding: 80px 60px;
+        z-index: 10;
+      }
+
+      /* Header Section */
+      .garage-header {
+        font-family: 'Oswald', sans-serif;
+        text-transform: uppercase;
+        margin-bottom: 40px;
+      }
+
+      .title-main { font-size: 3rem; line-height: 0.9; letter-spacing: 1px; }
+      .title-sub { font-size: 0.8rem; color: var(--text-dim); letter-spacing: 2px; margin-top: 8px; }
+
+      /* Vehicle List Container */
+      .vehicle-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        flex-grow: 1;
+        overflow-y: auto;
+        padding-right: 10px;
+      }
+
+      /* Scrollbar Styling */
+      .vehicle-list::-webkit-scrollbar { width: 3px; }
+      .vehicle-list::-webkit-scrollbar-thumb { background: var(--accent-white); }
+
+      .vehicle-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        padding: 20px 25px;
+        cursor: pointer;
+        transition: 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* Active Selection Styling (White background, Black text) */
+      .vehicle-card.active {
+        background: var(--accent-white);
+        border-color: var(--accent-white);
+        transform: translateX(-5px);
+      }
+
+      .v-info .v-name {
+        font-family: 'Oswald', sans-serif;
+        font-size: 1.3rem;
+        text-transform: uppercase;
+      }
+
+      .v-info .v-plate {
+        font-size: 0.75rem;
+        display: block;
+        opacity: 0.5;
+        font-weight: 600;
+        margin-top: 2px;
+      }
+
+      .v-status {
+        text-align: right;
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+      }
+
+      .vehicle-card.active .v-name,
+      .vehicle-card.active .v-plate,
+      .vehicle-card.active .v-status { color: #000; opacity: 1; }
+
+      /* Bottom Action Area */
+      .action-area {
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .details-box {
+        margin-bottom: 25px;
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--text-dim);
+        margin-bottom: 8px;
+      }
+
+      .detail-val { color: var(--text-main); }
+
+      .btn-retrieve {
+        width: 100%;
+        background: var(--accent-white);
+        color: #000;
+        border: none;
+        padding: 22px;
+        font-family: 'Oswald', sans-serif;
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        cursor: pointer;
+        font-weight: 700;
+        transition: 0.2s;
+      }
+
+      .btn-retrieve:hover {
+        background: #e0e0e0;
+      }
+    </style>
+</head>
+<body>
+
+    <div class="side-panel">
+        <div class="header-group">
+            <div class="garage-header">
+                <div class="title-main">PRIVATE<br>GARAGE</div>
+                <div class="title-sub">Select a vehicle to retrieve</div>
+            </div>
+
+            <div class="vehicle-list">
+                <div class="vehicle-card active" onclick="selectVeh(this, 'Elegy Retro', 'LS 4492', '100%', '82%')">
+                    <div class="v-info">
+                        <span class="v-name">Elegy Retro</span>
+                        <span class="v-plate">Plate: LS 4492</span>
+                    </div>
+                    <span class="v-status">Stored</span>
+                </div>
+
+                <div class="vehicle-card" onclick="selectVeh(this, 'Sultan Classic', 'BC 1022', '94%', '45%')">
+                    <div class="v-info">
+                        <span class="v-name">Sultan Classic</span>
+                        <span class="v-plate">Plate: BC 1022</span>
+                    </div>
+                    <span class="v-status">Stored</span>
+                </div>
+
+                <div class="vehicle-card" onclick="selectVeh(this, 'Buffalo STX', 'SA 9931', '80%', '20%')">
+                    <div class="v-info">
+                        <span class="v-name">Buffalo STX</span>
+                        <span class="v-plate">Plate: SA 9931</span>
+                    </div>
+                    <span class="v-status">Impounded</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-area">
+            <div class="details-box" id="details-container">
+                <div class="detail-row">
+                    <span>Engine Condition</span>
+                    <span class="detail-val" id="engine-val">100%</span>
+                </div>
+                <div class="detail-row">
+                    <span>Fuel Level</span>
+                    <span class="detail-val" id="fuel-val">82%</span>
+                </div>
+            </div>
+            
+            <button class="btn-retrieve" id="action-btn" onclick="retrieveVeh()">Retrieve Vehicle</button>
+        </div>
+    </div>
+
+    <script>
+        function selectVeh(element, name, plate, engine, fuel) {
+            // Update UI selection
+            document.querySelectorAll('.vehicle-card').forEach(card => card.classList.remove('active'));
+            element.classList.add('active');
+
+            // Update Details
+            document.getElementById('engine-val').innerText = engine;
+            document.getElementById('fuel-val').innerText = fuel;
+
+            // Update Button context if needed
+            const status = element.querySelector('.v-status').innerText;
+            const btn = document.getElementById('action-btn');
+            
+            if (status === "Impounded") {
+                btn.innerText = "Pay Impound Fee";
+                btn.style.opacity = "0.6";
+            } else {
+                btn.innerText = "Retrieve Vehicle";
+                btn.style.opacity = "1.0";
+            }
+        }
+
+        function retrieveVeh() {
+            const activeVeh = document.querySelector('.vehicle-card.active .v-name').innerText;
+            console.log("Retrieving: " + activeVeh);
+            // mp.trigger("garage:spawn", activeVeh);
+        }
+    </script>
+</body>
+</html>
