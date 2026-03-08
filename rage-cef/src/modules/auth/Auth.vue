@@ -244,9 +244,9 @@ async function submit() {
   position: fixed;
   inset: 0;
   z-index: 0;
- /* background-image:
+  background-image:
     linear-gradient(to right, rgba(0,0,0,0.88) 32%, transparent 100%),
-    url('https://wallpapercat.com/w/middle-retina/b/8/a/2153211-1920x1080-desktop-full-hd-gta-v-wallpaper-image.jpg');*/
+    url('https://i.pinimg.com/originals/4b/fe/e6/4bfee6bebf46079563fcba01e5d38b44.png');
   background-size: cover;
   background-position: center;
   filter: blur(3px) saturate(0.9);

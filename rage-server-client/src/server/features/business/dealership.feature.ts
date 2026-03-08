@@ -104,6 +104,7 @@ function spawnPreviewVehicle(
   veh.setVariable('colorPrimary',   colorHex);
   veh.setVariable('colorSecondary', colorHex);
   veh.setVariable('dbId', -1); // marks it as managed for vehicle-stream.ts
+  veh.rotation = new mp.Vector3(0, 0, pos.heading);
   return veh;
 }
 
@@ -195,14 +196,20 @@ class DealershipFeature {
     // Create the owned vehicle DB record at the showcase position
     const plate = generatePlate();
     const dbVeh = await pvSvc.createVehicle(charId, itemKey, plate, colorHex || '#ffffff', config);
-    await pvSvc.setParked(dbVeh, spawnSlot.x, spawnSlot.y, spawnSlot.z, spawnSlot.heading, player.dimension);
 
     // Spawn the live vehicle, apply color to both channels, and put player inside
-    const liveVeh = vehicleManager.spawn(dbVeh);
+    const liveVeh = vehicleManager.spawn(dbVeh, spawnSlot);
     liveVeh.setVariable('colorPrimary',   colorHex || '#ffffff');
     liveVeh.setVariable('colorSecondary', colorHex || '#ffffff');
-    // Persist secondary color to DB (createVehicle defaults it to white)
-    dbVeh.colorSecondary = colorHex || '#ffffff';
+    // Persist secondary color, spawn position, and un-park so login auto-spawn
+    // can re-spawn this vehicle at its last saved position on next login.
+    dbVeh.colorSecondary  = colorHex || '#ffffff';
+    dbVeh.isParked        = false;
+    dbVeh.parkedX         = spawnSlot.x;
+    dbVeh.parkedY         = spawnSlot.y;
+    dbVeh.parkedZ         = spawnSlot.z;
+    dbVeh.parkedHeading   = spawnSlot.heading;
+    dbVeh.parkedDimension = player.dimension;
     await pvSvc.save(dbVeh);
     // Unfreeze first so player can drive their new vehicle
     player.call('dealership:previewFreeze', [false]);
@@ -242,9 +249,10 @@ class DealershipFeature {
     const base = showcaseZone
       ? { x: showcaseZone.x, y: showcaseZone.y, z: showcaseZone.z }
       : { x: b.x - 3, y: b.y + 4, z: b.z };
+    const baseHeading = showcaseZone?.heading ?? 0;
 
     // Find a free slot — vehicle will spawn here when the player picks a model
-    const slot = findFreeSlot(base, 0);
+    const slot = findFreeSlot(base, baseHeading);
 
     // Save player state — no vehicle spawned yet
     const pos = player.position;

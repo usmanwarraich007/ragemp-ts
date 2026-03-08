@@ -55,6 +55,13 @@ export class PlayerVehicle extends BaseEntity {
   @Column({ type: 'boolean', default: true  }) isParked!:    boolean;
   @Column({ type: 'boolean', default: false }) impounded!:   boolean;
 
+  /**
+   * If set, the vehicle is currently stored inside this garage.
+   * null = out in the world (spawned or parked at a saved position).
+   */
+  @Column({ type: 'int', nullable: true, default: null })
+  garageId!: number | null;
+
   // ── Parked position (only meaningful when isParked = true) ─────────────────
   @Column({ type: 'float', default: 0 }) parkedX!:         number;
   @Column({ type: 'float', default: 0 }) parkedY!:         number;

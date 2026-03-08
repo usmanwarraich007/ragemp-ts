@@ -68,7 +68,7 @@ class VehicleStateFeature {
     const vehicle = mp.vehicles.toArray().find((v) => v.id === vehicleRemoteId);
     if (!vehicle) return { ok: false };
 
-    // Only the driver (or owner) can control the engine
+    // Player must be in the vehicle (client-side isLocalPlayerDriver handles the seat check)
     if (player.vehicle?.id !== vehicleRemoteId) {
       notify(player).screen.error('You must be in the vehicle to control the engine.');
       return { ok: false };

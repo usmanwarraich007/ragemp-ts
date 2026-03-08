@@ -119,8 +119,11 @@ class BusinessCommands {
         const b = await svc.findById(id);
         if (!b) { player.outputChatBox(`!{FF4444}Business #${id} not found.`); return; }
 
-        const pos = player.position;
-        await svc.upsertZone(id, zoneKey, pos.x, pos.y, pos.z);
+        // Use vehicle heading when inside one (same as garage setzone)
+        const veh     = player.vehicle;
+        const pos     = veh ? veh.position : player.position;
+        const heading = veh ? veh.heading  : player.heading;
+        await svc.upsertZone(id, zoneKey, pos.x, pos.y, pos.z, heading);
 
         // Broadcast full update (includes new zone positions next sync)
         const zones  = await svc.getZones(id);

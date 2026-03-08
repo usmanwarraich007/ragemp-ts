@@ -9,6 +9,8 @@ import './business/business.feature';
 import './business/business.commands';
 import './business/dealership.feature';
 import './vehicles/vehicle.commands';
+import './garage/garage.feature';
+import './garage/garage.commands';
 
 // Dev/debug utilities — remove or gate before going live:
 import './dev/debug.commands';

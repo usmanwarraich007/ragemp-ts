@@ -5,6 +5,7 @@ import './vehicles/vehicle-stream';     // applies saved visuals (colors, mods, 
 import './vehicles/vehicle-controls.client'; // engine (↑/↓) + lock (K) key bindings
 import './session';                      // stores characterId sent by server on character:select
 import './business';                     // business system — registers handlers for all types
+import './garage';                       // garage system — registers handlers for all garage types
 import './hud/vehicle-hud';
 import './hud/notification-relay';
 import './hud/hud-cleanup';

@@ -149,12 +149,13 @@ export async function upsertZone(
   businessId: number,
   zoneKey: string,
   x: number, y: number, z: number,
+  heading = 0,
 ): Promise<void> {
   let zone = await zoneRepo().findOneBy({ businessId, zoneKey });
   if (zone) {
-    zone.x = x; zone.y = y; zone.z = z;
+    zone.x = x; zone.y = y; zone.z = z; zone.heading = heading;
   } else {
-    zone = zoneRepo().create({ businessId, zoneKey, x, y, z });
+    zone = zoneRepo().create({ businessId, zoneKey, x, y, z, heading });
   }
   await zoneRepo().save(zone);
 

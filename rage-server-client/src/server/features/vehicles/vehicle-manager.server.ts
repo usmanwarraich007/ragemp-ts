@@ -38,19 +38,22 @@ class VehicleManagerClass {
    * The client-side vehicle stream script reads them on `entityStreamIn` and
    * applies the actual natives.
    */
-  spawn(dbVehicle: PlayerVehicle): VehicleMp {
+  spawn(
+    dbVehicle: PlayerVehicle,
+    overrides?: { x?: number; y?: number; z?: number; heading?: number },
+  ): VehicleMp {
     if (this.byDbId.has(dbVehicle.id)) {
       return this.byDbId.get(dbVehicle.id)!;
     }
 
     const pos = new mp.Vector3(
-      dbVehicle.parkedX,
-      dbVehicle.parkedY,
-      dbVehicle.parkedZ,
+      overrides?.x       ?? dbVehicle.parkedX,
+      overrides?.y       ?? dbVehicle.parkedY,
+      overrides?.z       ?? dbVehicle.parkedZ,
     );
 
     const vehicle = mp.vehicles.new(mp.joaat(dbVehicle.model), pos, {
-      heading:     dbVehicle.parkedHeading,
+      heading:     overrides?.heading ?? dbVehicle.parkedHeading,
       numberPlate: dbVehicle.plate,
       dimension:   dbVehicle.parkedDimension,
       alpha:       255,

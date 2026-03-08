@@ -1,6 +1,7 @@
 import type { AuthResult, CharacterSummary, CharacterAppearance } from './types/auth';
 import type { BusinessDto, BusinessInventoryItemDto, VehicleModelConfigDto, DealershipStockItemDto, DealershipManageDto } from './types/business';
 import type { PlayerVehicleDto } from './types/vehicle';
+import type { GarageDto, GarageVehicleDto } from './types/garage';
 
 // Server-side procedures (CEF/Client → Server)
 export interface ServerRPCs {
@@ -51,6 +52,11 @@ export interface ServerRPCs {
   'dealership:restock':       (businessId: number, itemKey: string, qty: number, purchasePrice: number) => { ok: boolean };
   'dealership:setPrice':      (businessId: number, itemKey: string, price: number) => { ok: boolean };
   'dealership:removeItem':    (businessId: number, itemKey: string) => { ok: boolean };
+
+  // Garage
+  'garage:getVehicles': (garageId: number) => GarageVehicleDto[];
+  'garage:retrieve':    (garageId: number, playerVehicleId: number) => { ok: boolean; message?: string };
+  'garage:park':        (garageId: number) => { ok: boolean; fee: number; message?: string };
 }
 
 // Client/CEF-side procedures (Server → CEF, initiated by the server)

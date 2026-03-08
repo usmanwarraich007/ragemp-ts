@@ -4,6 +4,7 @@ import { Account } from './account.entity';
 import { Character } from './character.entity';
 import { applyAppearance } from './ped';
 import { syncPlayerWorld } from '../business/business.feature';
+import { syncPlayerWorld as syncGarages } from '../garage/garage.feature';
 import { vehicleManager } from '../vehicles/vehicle-manager.server';
 import { findByCharacter } from '../vehicles/player-vehicle.service';
 import type { AuthResult, CharacterSummary, CharacterAppearance } from '@ragemp/shared';
@@ -247,6 +248,7 @@ class AuthFeature {
 
     // Sync world data to the newly spawned character
     void syncPlayerWorld(player);
+    void syncGarages(player);
 
     // ── Auto-spawn unparked vehicles ────────────────────────────────────────
     // Any vehicle with isParked=false was left on the map before disconnect.

@@ -10,6 +10,7 @@ import { Character } from '../features/auth/character.entity';
 import { Business, BusinessInventory, BusinessZone } from '../features/business/business.entity';
 import { VehicleModelConfig } from '../features/vehicles/vehicle-model-config.entity';
 import { PlayerVehicle } from '../features/vehicles/player-vehicle.entity';
+import { Garage, GarageZone } from '../features/garage/garage.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -20,5 +21,5 @@ export const AppDataSource = new DataSource({
   database: POSTGRES_DB,
   synchronize: process.env.NODE_ENV !== 'production',
   logging: true,
-  entities: [Account, Character, Business, BusinessInventory, BusinessZone, VehicleModelConfig, PlayerVehicle],
+  entities: [Account, Character, Business, BusinessInventory, BusinessZone, VehicleModelConfig, PlayerVehicle, Garage, GarageZone],
 });

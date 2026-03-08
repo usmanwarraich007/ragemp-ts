@@ -57,6 +57,8 @@ export class BusinessZone extends BaseEntity {
   @Column({ type: 'float', default: 0 }) x!: number;
   @Column({ type: 'float', default: 0 }) y!: number;
   @Column({ type: 'float', default: 0 }) z!: number;
+  /** Direction the showcase / spawn faces (0–360, GTA compass). */
+  @Column({ type: 'float', default: 0 }) heading!: number;
 }
 
 @Entity('business_inventory')
