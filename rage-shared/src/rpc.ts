@@ -2,11 +2,18 @@ import type { AuthResult, CharacterSummary, CharacterAppearance } from './types/
 import type { BusinessDto, BusinessInventoryItemDto, VehicleModelConfigDto, DealershipStockItemDto, DealershipManageDto } from './types/business';
 import type { PlayerVehicleDto } from './types/vehicle';
 import type { GarageDto, GarageVehicleDto } from './types/garage';
+import type { ChatMode } from './types/chat';
 
 // Server-side procedures (CEF/Client → Server)
 export interface ServerRPCs {
   // Teleport
   'tpm:teleport': (x: number, y: number, z: number) => void;
+
+  // Chat
+  /** Main chat entry point — all T-key text from CEF routes here. */
+  'chat:sendMessage': (mode: ChatMode, text: string) => { ok: boolean; error?: string };
+  /** Fire any registered @Command from CEF (e.g. /tpm, /veh, /aveh). */
+  'chat:command': (rawInput: string) => { ok: boolean; error?: string };
 
   // Auth
   'auth:login':    (username: string, password: string) => AuthResult;

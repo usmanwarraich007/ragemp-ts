@@ -15,18 +15,12 @@
  */
 
 import type { NotificationPayload } from '@ragemp/shared';
+import { chatMessage } from './chatMessage';
 
 type NotifyType = NotificationPayload['type'];
 
-const Colors = {
-  success: '44FF88',
-  error:   'FF4444',
-  info:    '44AAFF',
-  warning: 'FFAA00',
-} as const;
-
 function chat(player: PlayerMp, type: NotifyType, message: string): void {
-  player.outputChatBox(`!{${Colors[type]}}${message}`);
+  chatMessage(player, message, type);
 }
 
 function screen(player: PlayerMp, type: NotifyType, message: string, duration = 4000): void {

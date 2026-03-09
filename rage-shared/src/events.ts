@@ -5,6 +5,7 @@
 import type { SpeedometerData, AreaData, InteractButton } from './types/hud';
 import type { PlayerStats } from './types/player';
 import type { BusinessDto, DealershipStockItemDto, DealershipManageDto } from './types/business';
+import type { ChatMessage } from './types/chat';
 
 export interface NotificationPayload {
   type: 'success' | 'error' | 'info' | 'warning';
@@ -31,6 +32,12 @@ export interface CefEventMap {
 
   // Notifications
   'notify:show': NotificationPayload;
+
+  // Chat — server → client → CEF
+  /** A new chat message to display in the chat box. */
+  'chat:message': ChatMessage;
+  /** Toggle the chat input box focus state. true = open, false = close. */
+  'chat:focus': boolean;
 
   // Player
   'player:setStats': PlayerStats;

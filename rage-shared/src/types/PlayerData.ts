@@ -13,6 +13,10 @@ export interface CharacterData {
   cash: number;
   bank: number;
   job: string | null;
+  /** Faction the character belongs to. null = civilian. Set by future faction system. */
+  factionId: number | null;
+  /** Active radio channel number. null = no radio. Set by future faction system. */
+  radioChannel: number | null;
 }
 
 /**

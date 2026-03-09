@@ -6,6 +6,7 @@ import './vehicles/vehicle-controls.client'; // engine (↑/↓) + lock (K) key 
 import './session';                      // stores characterId sent by server on character:select
 import './business';                     // business system — registers handlers for all types
 import './garage';                       // garage system — registers handlers for all garage types
+import './chat/chat.client';             // chat relay — T key, message + focus forwarding to CEF
 import './hud/vehicle-hud';
 import './hud/notification-relay';
 import './hud/hud-cleanup';
@@ -18,7 +19,7 @@ import { browserManager } from './browser';
 import { onCreatorOpen, onCreatorClose } from './character-creator/character-creator';
 
 
-const IS_DEV = true;
+const IS_DEV = false;
 const CEF_URL = IS_DEV
   ? 'http://localhost:5173'
   : 'package://cef/index.html';

@@ -4,6 +4,7 @@
 
 import './auth/auth.feature';
 import './admin/admin.feature';
+import './chat/chat.feature';
 import './vehicles/vehicle-trunk.feature';
 import './business/business.feature';
 import './business/business.commands';

@@ -13,6 +13,8 @@ class BrowserManager {
   private queue: Array<{ event: string; jsonPayload: string }> = [];
   /** True when the cursor was force-enabled via F2 (independent of page state). */
   private cursorForced = false;
+  /** True when a full-screen page is shown via show() and not yet hidden via hide(). */
+  private pageOpen = false;
 
   constructor() {
     // Flush the queue as soon as the CEF page finishes loading
@@ -57,6 +59,7 @@ class BrowserManager {
    */
   show(page: string, data?: unknown, suppressHud = true): void {
     if (!this.browser) return;
+    this.pageOpen = true;
     this.cursorForced = true;
     this.emit('system', 'setPage', { page, data, suppressHud });
     mp.gui.cursor.show(true, true);
@@ -67,9 +70,18 @@ class BrowserManager {
    */
   hide(): void {
     if (!this.browser) return;
+    this.pageOpen = false;
     this.cursorForced = false;
     this.emit('system', 'setPage', { page: null });
     mp.gui.cursor.show(false, false);
+  }
+
+  /**
+   * Returns true when a full-screen page is mounted (auth, inventory, etc.).
+   * Unaffected by the F2 cursor toggle — only show()/hide() change this.
+   */
+  isPageOpen(): boolean {
+    return this.pageOpen;
   }
 
   /**

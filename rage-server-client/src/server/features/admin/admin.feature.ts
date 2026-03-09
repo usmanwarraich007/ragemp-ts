@@ -4,7 +4,7 @@
  * All commands require adminLevel >= 1 unless noted.
  * Use /setadmin [id] [level] (adminLevel 5+) to promote accounts.
  */
-import { Command, Rpc, notify } from '../../core';
+import { Command, Rpc, notify, chatMessage } from '../../core';
 import { playerStore } from '../../core/playerStore';
 import { log } from '../../core/logger';
 import { Character } from '../auth/character.entity';
@@ -17,28 +17,25 @@ class AdminCommands {
 
   // ── Vehicle ──────────────────────────────────────────────────────────────
 
-  @Command('aveh', { usage: '/veh [model]', minArgs: 1, adminLevel: 1 })
+  @Command('aveh', { usage: '/aveh [model]', minArgs: 1, adminLevel: 1 })
   static spawnVehicle(player: PlayerMp, model: string): void {
-    // Delete old vehicle
     const old = lastVehicle.get(player.id);
     if (old && mp.vehicles.exists(old)) old.destroy();
 
-    const hash = mp.joaat(model);
-    const pos  = player.position;
-    const veh  = mp.vehicles.new(hash, pos, {
-      heading:   player.heading,
+    const veh = mp.vehicles.new(mp.joaat(model), player.position, {
+      heading:     player.heading,
       numberPlate: 'ADMIN',
-      dimension: player.dimension,
+      dimension:   player.dimension,
     });
 
     if (!veh) {
-      player.outputChatBox(`!{FF4444}Unknown model: ${model}`);
+      chatMessage(player, `Unknown model: ${model}`, 'error');
       return;
     }
 
     lastVehicle.set(player.id, veh);
-    player.putIntoVehicle(veh, -1);
-    player.outputChatBox(`!{00FF88}Spawned: ${model}`);
+    player.putIntoVehicle(veh, 0);
+    chatMessage(player, `Spawned: ${model}`, 'success');
     log.info('[Admin]', `${player.name} spawned vehicle: ${model}`);
   }
 

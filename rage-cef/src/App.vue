@@ -30,6 +30,7 @@
 
     <!-- ── Persistent overlays — always rendered regardless of layer ──── -->
     <Notification />
+    <Chat />
   </div>
 </template>
 
@@ -40,6 +41,7 @@ import { usePageStore } from '@/stores/page.store';
 import Speedometer   from '@/modules/speedometer/Speedometer.vue';
 import Notification  from '@/modules/notification/Notification.vue';
 import StatRings     from '@/modules/stat-rings/StatRings.vue';
+import Chat          from '@/modules/chat/Chat.vue';
 
 // Load all modules — triggers self-registration via createModule()
 import '@/modules';
