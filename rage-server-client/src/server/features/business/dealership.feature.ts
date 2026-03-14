@@ -9,7 +9,6 @@
 import { Rpc, notify, log, playerStore } from '../../core';
 import * as svc from '../business/business.service';
 import * as catSvc from '../vehicles/vehicle-model-config.service';
-import * as pvSvc from '../vehicles/player-vehicle.service';
 import { vehicleManager } from '../vehicles/vehicle-manager.server';
 import type { DealershipStockItemDto, DealershipManageDto } from '@ragemp/shared';
 
@@ -193,27 +192,18 @@ class DealershipFeature {
       spawnSlot = findFreeSlot({ x: pos.x, y: pos.y, z: pos.z }, player.heading);
     }
 
-    // Create the owned vehicle DB record at the showcase position
-    const plate = generatePlate();
-    const dbVeh = await pvSvc.createVehicle(charId, itemKey, plate, colorHex || '#ffffff', config);
+    // Create the owned vehicle DB record (fuel from catalog, color into cosmetics row)
+    const plate  = generatePlate();
+    const dbVeh  = await vehicleManager.createVehicle(charId, itemKey, plate, colorHex || '#ffffff');
 
-    // Spawn the live vehicle, apply color to both channels, and put player inside
-    const liveVeh = vehicleManager.spawn(dbVeh, spawnSlot);
-    liveVeh.setVariable('colorPrimary',   colorHex || '#ffffff');
-    liveVeh.setVariable('colorSecondary', colorHex || '#ffffff');
-    // Persist secondary color, spawn position, and un-park so login auto-spawn
-    // can re-spawn this vehicle at its last saved position on next login.
-    dbVeh.colorSecondary  = colorHex || '#ffffff';
-    dbVeh.isParked        = false;
-    dbVeh.parkedX         = spawnSlot.x;
-    dbVeh.parkedY         = spawnSlot.y;
-    dbVeh.parkedZ         = spawnSlot.z;
-    dbVeh.parkedHeading   = spawnSlot.heading;
-    dbVeh.parkedDimension = player.dimension;
-    await pvSvc.save(dbVeh);
-    // Unfreeze first so player can drive their new vehicle
-    player.call('dealership:previewFreeze', [false]);
-    player.putIntoVehicle(liveVeh, 0); // seat 0 = driver
+    // Spawn the live vehicle at the showcase position and put the player inside
+    const liveVeh = await vehicleManager.spawn(dbVeh.id, spawnSlot);
+    if (liveVeh) {
+      liveVeh.mp.setVariable('colorPrimary',   colorHex || '#ffffff');
+      liveVeh.mp.setVariable('colorSecondary', colorHex || '#ffffff');
+      player.call('dealership:previewFreeze', [false]);
+      player.putIntoVehicle(liveVeh.mp, 0); // seat 0 = driver
+    }
 
     // Credit dealership balance
     b.balance = Number(b.balance) + price;

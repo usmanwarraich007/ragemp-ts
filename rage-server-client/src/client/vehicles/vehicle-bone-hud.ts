@@ -41,7 +41,7 @@ const BONE_CONFIGS: BoneConfig[] = [
   },
 ];
 
-const LABEL_RADIUS = 2.5;
+const LABEL_RADIUS = 2;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -72,6 +72,8 @@ function makeBoneInteractable(vehicle: VehicleMp, cfg: BoneConfig) {
     id:          `veh-${vehicle.remoteId}-${cfg.boneName}`,
     label:       cfg.friendlyName,
     labelRadius: LABEL_RADIUS,
+    snapRadius:  0.2,
+    reticleLimit: 0.4,
     menuTitle:   '', // proximity label from registry already names the bone
 
     getPosition() {
@@ -155,15 +157,3 @@ mp.events.add('entityStreamOut', (entity: EntityMp) => {
 
 // Register vehicles already in stream at load time
 mp.vehicles.toArray().forEach(registerVehicle);
-
-// ── Apply door state from server ─────────────────────────────────────────────
-//
-// Server broadcasts 'vehicle:door:apply' after any door/trunk toggle.
-// We run the native here — setDoorOpen/setDoorShut are client-only calls.
-
-mp.events.add('vehicle:door:apply', (vehicleRemoteId: number, doorIndex: number, isOpen: boolean) => {
-  const vehicle = mp.vehicles.atRemoteId(vehicleRemoteId);
-  if (!vehicle?.handle) return;
-  if (isOpen) vehicle.setDoorOpen(doorIndex, false, false);
-  else        vehicle.setDoorShut(doorIndex, false);
-});

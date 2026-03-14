@@ -180,7 +180,7 @@ class PlayerGarageCommands {
     const garage = await svc.findById(closestId);
     if (!garage) { player.outputChatBox('!{FF4444}Garage not found.'); return; }
 
-    const dbVehicle = vehicleManager.getDbRow(player.vehicle);
+    const dbVehicle = vehicleManager.getRuntimeByMp(player.vehicle)?.dbRow ?? null;
     if (!dbVehicle) {
       player.outputChatBox('!{FF4444}This vehicle cannot be parked here.');
       return;
@@ -191,8 +191,7 @@ class PlayerGarageCommands {
     }
 
     const fee = Number(garage.parkFee);
-    await vehicleManager.despawn(dbVehicle.id);
-    await svc.parkVehicle(dbVehicle, closestId);
+    await vehicleManager.storeToGarage(dbVehicle.id, closestId);
 
     player.outputChatBox(`!{44FF88}Vehicle parked at ${garage.name}. Fee: $${fee}.`);
     log.info('[Garage]', `${player.name} parked vehicle #${dbVehicle.id} in garage #${closestId}`);

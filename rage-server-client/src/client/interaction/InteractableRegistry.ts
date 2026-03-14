@@ -18,6 +18,9 @@ const MAX_LABEL_DIST    = 12.0;
 /** Default ray-to-point snap radius when interactable.snapRadius is not set. */
 const DEFAULT_SNAP_RADIUS = 0.7;
 
+/** Default reticle limit when interactable.reticleLimit is not set. */
+const DEFAULT_RETICLE_LIMIT = 0.7;
+
 /** Raycast distance in metres. */
 const RAYCAST_DIST      = 15.0;
 
@@ -65,6 +68,7 @@ class InteractableRegistry {
    *   getPosition:   () => new mp.Vector3(x, y, z),
    *   items:         () => [{ label: 'Use ATM', action: 'atm:use' }], // dynamic
    *   snapRadius:    1.2,                      // larger snap for wide marker
+   *   reticleLimit:  0.4,
    *   onSelect:      (action) => { … },
    * });
    */
@@ -100,61 +104,74 @@ class InteractableRegistry {
       return;
     }
 
-    const px = player.position.x;
-    const py = player.position.y;
-    const pz = player.position.z;
+    const startPos = mp.game.cam.getGameplayCoord();
+    const camRot = mp.game.cam.getGameplayCamRot(2);
+    
+    // 1. Calculate Camera Direction Vector
+    const rotZ = camRot.z * (Math.PI / 180);
+    const rotX = camRot.x * (Math.PI / 180);
+    const dir = new mp.Vector3(
+      -Math.sin(rotZ) * Math.cos(rotX),
+      Math.cos(rotZ) * Math.cos(rotX),
+      Math.sin(rotX)
+    );
 
-    // ── 1. Collect items within labelRadius ────────────────────────────────
+    // 2. Filter nearby items (basic distance check from player)
     const nearby: Array<{ item: WorldInteractable; pos: Vector3; dist: number }> = [];
-
     for (const item of this.items.values()) {
       const pos = item.getPosition();
       if (!pos) continue;
 
-      const dist = mp.game.system.vdist(px, py, pz, pos.x, pos.y, pos.z);
-      const cap  = Math.min(item.labelRadius, MAX_LABEL_DIST);
+      const dist = mp.game.system.vdist(player.position.x, player.position.y, player.position.z, pos.x, pos.y, pos.z);
+      const cap = Math.min(item.labelRadius, MAX_LABEL_DIST);
       if (dist <= cap) nearby.push({ item, pos, dist });
     }
 
-    // ── 2. Single raycast ──────────────────────────────────────────────────
-    const raycast = raycastFromCamera(RAYCAST_DIST);
-
-    // ── 3. Ray-to-point snap (respects per-item snapRadius + interactRadius) 
+    // 3. Sphere Cast Logic: Find item closest to the "Look Line"
     let newTargeted: WorldInteractable | null = null;
+    let showReticle = false;
     let bestSnap = Infinity;
 
-    if (raycast) {
-      const hx = raycast.position.x;
-      const hy = raycast.position.y;
-      const hz = raycast.position.z;
+    for (const { item, pos, dist } of nearby) {
+      const interactR = item.interactRadius ?? item.labelRadius;
+      if (dist > interactR) continue;
 
-      for (const { item, pos, dist } of nearby) {
-        const snapR    = item.snapRadius    ?? DEFAULT_SNAP_RADIUS;
-        const interactR = item.interactRadius ?? item.labelRadius;
+      // Vector from camera to the object
+      const vecToObject = new mp.Vector3(pos.x - startPos.x, pos.y - startPos.y, pos.z - startPos.z);
+      
+      // Calculate Projection (how far along the look-vector the object is)
+      const dot = (vecToObject.x * dir.x) + (vecToObject.y * dir.y) + (vecToObject.z * dir.z);
+      
+      // If dot < 0, the object is behind the camera
+      if (dot < 0 || dot > RAYCAST_DIST) continue;
 
-        // Must be within interact radius AND within snap distance of ray hit
-        if (dist > interactR) continue;
+      // Find the perpendicular distance from the line to the point
+      // formula: dist = ||vecToObject - (projection_vec)||
+      const projX = startPos.x + dir.x * dot;
+      const projY = startPos.y + dir.y * dot;
+      const projZ = startPos.z + dir.z * dot;
 
-        const snapDist = mp.game.system.vdist(hx, hy, hz, pos.x, pos.y, pos.z);
-        if (snapDist < snapR && snapDist < bestSnap) {
-          bestSnap    = snapDist;
-          newTargeted = item;
-        }
+      const snapDist = mp.game.system.vdist(pos.x, pos.y, pos.z, projX, projY, projZ);
+      const snapLimit = item.snapRadius ?? DEFAULT_SNAP_RADIUS;
+      const reticleLimit = item.reticleLimit ?? DEFAULT_RETICLE_LIMIT;
+
+      if (snapDist < reticleLimit) {
+        showReticle = true;
+      }
+
+      if (snapDist < snapLimit && snapDist < bestSnap) {
+        bestSnap = snapDist;
+        newTargeted = item;
       }
     }
 
-    // ── 4. Reticle ─────────────────────────────────────────────────────────
-    if (newTargeted) mp.game.ui.showHudComponentThisFrame(14);
+    // ── 4. Reticle & Menu Sync ─────────────────────────────────────────────
+    if (showReticle) mp.game.ui.showHudComponentThisFrame(14);
 
-    // ── 5. Sync menu if target changed OR canInteract result changed ───────────
     if (newTargeted !== this.targeted) {
-      // Target changed — full re-sync
       this.targeted = newTargeted;
       this.syncMenu(this.targeted);
     } else if (newTargeted?.canInteract) {
-      // Same target — re-evaluate canInteract every frame to catch state changes
-      // (e.g. vehicle locked remotely, business closed, player condition changed).
-      // syncMenu is only called when the result actually flips, so overhead is minimal.
       const result = newTargeted.canInteract();
       if (result !== this.lastCanInteract) {
         this.syncMenu(this.targeted);

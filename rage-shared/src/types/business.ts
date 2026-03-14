@@ -1,23 +1,7 @@
 // ── Business types ─────────────────────────────────────────────────────────
 
-// ── Vehicle Model Config (template, one per GTA model) ────────────────────
-
-export interface VehicleModelConfigDto {
-  model:        string;    // GTA model name e.g. "elegy2"
-  label:        string;    // Display name e.g. "Elegy Retro Custom"
-  category:     string;    // e.g. "Sports", "Muscle"
-  seats:        number;
-  basePrice:    number;
-  fuelCapacity: number;    // litres
-  fuelConsume:  number;    // litres/min at full throttle
-  trunkVolume:  number;    // litres — used by inventory system
-  speed:        number;    // 0-100 stat bar
-  accel:        number;
-  traction:     number;
-  brakes:       number;
-  colors:       string[];  // hex strings e.g. ["#fff","#333"]
-  tags:         string[];  // e.g. ["sports","tunable"]
-}
+import type { VehicleModelConfigDto } from './vehicle';
+export type { VehicleModelConfigDto };
 
 // ── Dealership composite DTOs ──────────────────────────────────────────────
 

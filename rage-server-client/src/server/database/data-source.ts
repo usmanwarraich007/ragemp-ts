@@ -10,6 +10,9 @@ import { Character } from '../features/auth/character.entity';
 import { Business, BusinessInventory, BusinessZone } from '../features/business/business.entity';
 import { VehicleModelConfig } from '../features/vehicles/vehicle-model-config.entity';
 import { PlayerVehicle } from '../features/vehicles/player-vehicle.entity';
+import { VehicleCosmetics } from '../features/vehicles/vehicle-cosmetics.entity';
+import { VehicleMod } from '../features/vehicles/vehicle-mods.entity';
+import { VehicleKey } from '../features/vehicles/vehicle-keys.entity';
 import { Garage, GarageZone } from '../features/garage/garage.entity';
 
 export const AppDataSource = new DataSource({
@@ -21,5 +24,5 @@ export const AppDataSource = new DataSource({
   database: POSTGRES_DB,
   synchronize: process.env.NODE_ENV !== 'production',
   logging: true,
-  entities: [Account, Character, Business, BusinessInventory, BusinessZone, VehicleModelConfig, PlayerVehicle, Garage, GarageZone],
+  entities: [Account, Character, Business, BusinessInventory, BusinessZone, VehicleModelConfig, PlayerVehicle, VehicleCosmetics, VehicleMod, VehicleKey, Garage, GarageZone],
 });

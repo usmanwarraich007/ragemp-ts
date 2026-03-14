@@ -134,7 +134,7 @@ export async function getParkedVehicles(
   garageId: number,
   characterId: number,
 ): Promise<PlayerVehicle[]> {
-  return vehicleRepo().findBy({ garageId, characterId });
+  return vehicleRepo().findBy({ garageId, characterId, state: 'GARAGED' });
 }
 
 /**
@@ -146,7 +146,7 @@ export async function parkVehicle(
   garageId: number,
 ): Promise<void> {
   vehicle.garageId = garageId;
-  vehicle.isParked = true;
+  vehicle.state    = 'GARAGED';
   await vehicleRepo().save(vehicle);
 }
 
@@ -156,6 +156,6 @@ export async function parkVehicle(
  */
 export async function retrieveVehicle(vehicle: PlayerVehicle): Promise<void> {
   vehicle.garageId = null;
-  vehicle.isParked = false;
+  vehicle.state    = 'SPAWNED';
   await vehicleRepo().save(vehicle);
 }

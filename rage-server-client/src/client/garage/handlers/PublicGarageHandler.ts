@@ -37,6 +37,7 @@ export class PublicGarageHandler extends GarageHandler {
     registry.register({
       id:             this.zoneId('entrance'),
       label:          data.name,
+      menuTitle:      '',
       subtitle:       `$${data.parkFee} to park`,
       labelRadius:    5.0,
       interactRadius: 2.0,

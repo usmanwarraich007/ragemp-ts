@@ -218,6 +218,8 @@ class AuthFeature {
         cash: character.cash,
         bank: character.bank,
         job: character.job,
+        factionId: null,
+        radioChannel: null,
       },
       isLoggedIn: true,
     });
@@ -258,10 +260,10 @@ class AuthFeature {
         const vehicles = await findByCharacter(character.id);
         let spawned = 0;
         for (const v of vehicles) {
-          if (v.isParked || v.impounded) continue;          // parked/impounded = not on map
-          if (vehicleManager.isLive(v.id)) continue;        // already spawned (shouldn't happen)
+          if (v.state !== 'SPAWNED') continue;              // only re-spawn vehicles left on the map
+          if (vehicleManager.getRuntime(v.id) !== null) continue; // already live (shouldn't happen)
           if (v.parkedX === 0 && v.parkedY === 0) continue; // no saved position yet
-          vehicleManager.spawn(v);
+          vehicleManager.spawn(v.id, { x: v.parkedX, y: v.parkedY, z: v.parkedZ, heading: v.parkedHeading });
           spawned++;
         }
         if (spawned > 0) {

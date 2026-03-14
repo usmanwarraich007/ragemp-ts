@@ -168,3 +168,19 @@ mp.events.add('vehicle:applyVisuals', (remoteId: number) => {
     if (bodyHealth   !== undefined) vehicle.setBodyHealth(bodyHealth);
   }, 300); // 300 ms — enough for the vehicle to be fully initialized
 });
+
+// ── Door state sync ───────────────────────────────────────────────────────────
+// Server sets vehicle.setVariable('door:N', isOpen) — only clients that have
+// the vehicle streamed in receive the update (no server-wide broadcast).
+// addDataHandler fires the native locally so the door opens/closes for nearby players.
+for (let i = 0; i < 6; i++) {
+  const doorIndex = i;
+  mp.events.addDataHandler(`door:${doorIndex}`, (entity: EntityMp, value: unknown) => {
+    if (entity.type !== 'vehicle') return;
+    const vehicle = entity as VehicleMp;
+    // setDoorOpen(doorIndex, loose, instantly) — instantly=false gives animation
+    // setDoorShut is required to close; setDoorOpen cannot close a door
+    if (Boolean(value)) vehicle.setDoorOpen(doorIndex, false, false);
+    else                vehicle.setDoorShut(doorIndex, true);
+  });
+}

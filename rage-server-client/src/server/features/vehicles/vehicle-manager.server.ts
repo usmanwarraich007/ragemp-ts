@@ -1,211 +1,169 @@
-/**
- * vehicle-manager.server.ts — Singleton that bridges PlayerVehicle DB rows
- * with live RAGE:MP VehicleMp entities.
- *
- * ⚠️ RAGE:MP SERVER-SIDE API NOTE:
- * The server VehicleMp object is intentionally thin. Visual methods like
- * setMod(), setColorRGB(), setNeonEnabled() are CLIENT-side natives only.
- *
- * The correct pattern for this architecture:
- *   Server: sets shared variables (setVariable) on spawn.
- *   Client: streams the vehicle in, reads the variables, applies visuals via natives.
- *
- * This manager:
- *  - Spawns vehicles with position / plate / lock state
- *  - Sets all DB state as shared variables so every client stream-in can apply them
- *  - Saves live state back to DB before despawning
- *  - Provides lookups: dbId → VehicleMp and VehicleMp → PlayerVehicle DB row
- */
-
 import { log } from '../../core';
+import { VehicleRuntime } from './vehicle-runtime';
 import { PlayerVehicle } from './player-vehicle.entity';
 import * as pvSvc from './player-vehicle.service';
+import * as cosmeticsSvc from './vehicle-cosmetics.service';
+import * as modsSvc from './vehicle-mods.service';
+import * as keysSvc from './vehicle-keys.service';
+import * as configSvc from './vehicle-model-config.service';
 
-// ── Manager ───────────────────────────────────────────────────────────────────
+type SpawnPosition = { x: number; y: number; z: number; heading: number };
 
 class VehicleManagerClass {
-  /** dbId → live VehicleMp entity */
-  private byDbId = new Map<number, VehicleMp>();
-  /** VehicleMp.id (RAGEMP net id) → PlayerVehicle DB row */
-  private byMpId = new Map<number, PlayerVehicle>();
+  private byDbId = new Map<number, VehicleRuntime>();
+  private byMpId = new Map<number, VehicleRuntime>();
 
-  // ── Spawn ─────────────────────────────────────────────────────────────────
+  // ── Internal spawn ────────────────────────────────────────────────────────
 
-  /**
-   * Spawns a PlayerVehicle DB row as a live RAGE:MP entity.
-   *
-   * All visual state (colors, mods, neon, tint) is written as shared variables.
-   * The client-side vehicle stream script reads them on `entityStreamIn` and
-   * applies the actual natives.
-   */
-  spawn(
+  private async spawnInternal(
     dbVehicle: PlayerVehicle,
-    overrides?: { x?: number; y?: number; z?: number; heading?: number },
-  ): VehicleMp {
-    if (this.byDbId.has(dbVehicle.id)) {
-      return this.byDbId.get(dbVehicle.id)!;
-    }
+    pos: SpawnPosition,
+  ): Promise<VehicleRuntime> {
+    if (this.byDbId.has(dbVehicle.id)) return this.byDbId.get(dbVehicle.id)!;
 
-    const pos = new mp.Vector3(
-      overrides?.x       ?? dbVehicle.parkedX,
-      overrides?.y       ?? dbVehicle.parkedY,
-      overrides?.z       ?? dbVehicle.parkedZ,
-    );
+    const [cosmetics, mods, keys] = await Promise.all([
+      cosmeticsSvc.findByVehicle(dbVehicle.id),
+      modsSvc.findByVehicle(dbVehicle.id),
+      keysSvc.findKeysForVehicle(dbVehicle.id),
+    ]);
 
-    const vehicle = mp.vehicles.new(mp.joaat(dbVehicle.model), pos, {
-      heading:     overrides?.heading ?? dbVehicle.parkedHeading,
+    const mpVeh = mp.vehicles.new(mp.joaat(dbVehicle.model), new mp.Vector3(pos.x, pos.y, pos.z), {
+      heading:     pos.heading,
       numberPlate: dbVehicle.plate,
       dimension:   dbVehicle.parkedDimension,
       alpha:       255,
       locked:      dbVehicle.isLocked,
     });
 
-    // ── Shared variables — all clients read these on vehicle stream-in ─────
-    // Identity
-    vehicle.setVariable('dbId',   dbVehicle.id);
+    mpVeh.setVariable('dbId',     dbVehicle.id);
+    mpVeh.setVariable('fuel',     dbVehicle.fuel);
+    mpVeh.setVariable('locked',   dbVehicle.isLocked);
+    mpVeh.setVariable('engineOn', false);
 
-    // State (HUD + lock)
-    vehicle.setVariable('fuel',     dbVehicle.fuel);
-    vehicle.setVariable('locked',   dbVehicle.isLocked);
-    vehicle.setVariable('engineOn', false); // always starts off — driver must start manually
+    if (cosmetics) cosmeticsSvc.applyToVariables(cosmetics, mpVeh);
+    modsSvc.applyToVariable(mods, mpVeh);
 
-    // Visuals — client applies these via natives in entityStreamIn
-    vehicle.setVariable('colorPrimary',   dbVehicle.colorPrimary);   // hex
-    vehicle.setVariable('colorSecondary', dbVehicle.colorSecondary); // hex
-    vehicle.setVariable('colorPearl',     dbVehicle.colorPearl);
-    vehicle.setVariable('wheelType',      dbVehicle.wheelType);
-    vehicle.setVariable('windowTint',     dbVehicle.windowTint);
-    vehicle.setVariable('neonEnabled',    dbVehicle.neonEnabled);
-    vehicle.setVariable('neonColor',      dbVehicle.neonColor);      // hex
-    vehicle.setVariable('mods',           dbVehicle.mods);           // JSON string
+    dbVehicle.state = 'SPAWNED';
 
-    // Register in maps
-    this.byDbId.set(dbVehicle.id, vehicle);
-    this.byMpId.set(vehicle.id,   dbVehicle);
+    const runtime = new VehicleRuntime(dbVehicle, mpVeh, cosmetics!, mods, keys);
+    this.byDbId.set(dbVehicle.id, runtime);
+    this.byMpId.set(mpVeh.id,     runtime);
 
     log.info('[VehicleManager]', `Spawned ${dbVehicle.model} #${dbVehicle.id} (plate: ${dbVehicle.plate})`);
-    return vehicle;
+    return runtime;
   }
 
-  // ── Despawn ───────────────────────────────────────────────────────────────
+  // ── Public API — lifecycle ────────────────────────────────────────────────
 
-  /**
-   * Saves current live state back to DB, destroys entity, cleans up maps.
-   */
+  async spawn(dbId: number, pos: SpawnPosition): Promise<VehicleRuntime | null> {
+    const dbVehicle = await pvSvc.findById(dbId);
+    if (!dbVehicle) return null;
+    return this.spawnInternal(dbVehicle, pos);
+  }
+
+  async spawnFromGarage(vehicleId: number, pos: SpawnPosition): Promise<VehicleRuntime | null> {
+    const dbVehicle = await pvSvc.findById(vehicleId);
+    if (!dbVehicle || dbVehicle.state !== 'GARAGED') return null;
+    dbVehicle.garageId = null;
+    return this.spawnInternal(dbVehicle, pos);
+  }
+
   async despawn(dbId: number): Promise<void> {
-    const vehicle = this.byDbId.get(dbId);
-    if (!vehicle) return;
-
-    const dbVehicle = this.byMpId.get(vehicle.id);
-    if (dbVehicle) {
-      dbVehicle.fuel     = Number(vehicle.getVariable('fuel')    ?? dbVehicle.fuel);
-      dbVehicle.isLocked = Boolean(vehicle.getVariable('locked') ?? true);
-      dbVehicle.isParked = true;
-
-      const pos = vehicle.position;
-      dbVehicle.parkedX         = pos.x;
-      dbVehicle.parkedY         = pos.y;
-      dbVehicle.parkedZ         = pos.z;
-      dbVehicle.parkedHeading   = vehicle.heading;
-      dbVehicle.parkedDimension = vehicle.dimension;
-
-      await pvSvc.save(dbVehicle);
-    }
-
-    vehicle.destroy();
+    const runtime = this.byDbId.get(dbId);
+    if (!runtime) return;
+    runtime.syncPosition();
+    await Promise.all([
+      pvSvc.save(runtime.dbRow),
+      runtime.cosmetics ? cosmeticsSvc.save(runtime.cosmetics) : Promise.resolve(),
+    ]);
+    runtime.mp.destroy();
     this.byDbId.delete(dbId);
-    if (dbVehicle) this.byMpId.delete(vehicle.id);
-
+    this.byMpId.delete(runtime.mp.id);
     log.info('[VehicleManager]', `Despawned vehicle db#${dbId}`);
   }
 
-  // ── Lookups ───────────────────────────────────────────────────────────────
+  async storeToGarage(dbId: number, garageId: number): Promise<void> {
+    const runtime = this.byDbId.get(dbId);
+    if (!runtime) return;
+    runtime.dbRow.state    = 'GARAGED';
+    runtime.dbRow.garageId = garageId;
+    runtime.syncPosition();
+    await Promise.all([
+      pvSvc.save(runtime.dbRow),
+      runtime.cosmetics ? cosmeticsSvc.save(runtime.cosmetics) : Promise.resolve(),
+    ]);
+    runtime.mp.destroy();
+    this.byDbId.delete(dbId);
+    this.byMpId.delete(runtime.mp.id);
+  }
 
-  getByDbId(dbId: number): VehicleMp | null {
+  async impound(dbId: number): Promise<void> {
+    const runtime = this.byDbId.get(dbId);
+    if (!runtime) return;
+    runtime.dbRow.state    = 'IMPOUNDED';
+    runtime.dbRow.garageId = null;
+    runtime.syncPosition();
+    await pvSvc.save(runtime.dbRow);
+    runtime.mp.destroy();
+    this.byDbId.delete(dbId);
+    this.byMpId.delete(runtime.mp.id);
+  }
+
+  async release(dbId: number, pos: SpawnPosition): Promise<VehicleRuntime | null> {
+    const dbVehicle = await pvSvc.findById(dbId);
+    if (!dbVehicle || dbVehicle.state !== 'IMPOUNDED') return null;
+    return this.spawnInternal(dbVehicle, pos);
+  }
+
+  // ── Public API — creation ─────────────────────────────────────────────────
+
+  async createVehicle(
+    charId:   number,
+    model:    string,
+    plate:    string,
+    colorHex: string,
+  ): Promise<PlayerVehicle> {
+    const config     = await configSvc.findByModel(model);
+    const dbVehicle  = await pvSvc.createVehicle(charId, model, plate, config!.fuelCapacity);
+    await Promise.all([
+      cosmeticsSvc.create(dbVehicle.id, { colorPrimary: colorHex }),
+      keysSvc.createOwnerKey(dbVehicle.id, charId),
+    ]);
+    return dbVehicle;
+  }
+
+  // ── Public API — lookups ──────────────────────────────────────────────────
+
+  getRuntime(dbId: number): VehicleRuntime | null {
     return this.byDbId.get(dbId) ?? null;
   }
 
-  getDbRow(vehicleMp: VehicleMp): PlayerVehicle | null {
+  getRuntimeByMp(vehicleMp: VehicleMp): VehicleRuntime | null {
     return this.byMpId.get(vehicleMp.id) ?? null;
   }
 
-  isLive(dbId: number): boolean {
-    return this.byDbId.has(dbId);
+  async findVehicle(dbId: number): Promise<PlayerVehicle | null> {
+    return pvSvc.findById(dbId);
   }
 
-  /** Update fuel shared variable and the in-memory DB row ref. */
-  setFuel(dbId: number, fuel: number): void {
-    const vehicle = this.byDbId.get(dbId);
-    if (vehicle) vehicle.setVariable('fuel', Math.max(0, fuel));
-
-    const dbVehicle = vehicle ? this.byMpId.get(vehicle.id) : null;
-    if (dbVehicle) dbVehicle.fuel = Math.max(0, fuel);
+  async getVehiclesForCharacter(charId: number): Promise<PlayerVehicle[]> {
+    return pvSvc.findByCharacter(charId);
   }
 
-  /** Toggle lock state, sync shared variable, update in-memory DB row. */
-  setLocked(dbId: number, locked: boolean): void {
-    const vehicle = this.byDbId.get(dbId);
-    if (vehicle) {
-      vehicle.locked = locked;
-      vehicle.setVariable('locked', locked);
-    }
-    const dbVehicle = vehicle ? this.byMpId.get(vehicle.id) : null;
-    if (dbVehicle) dbVehicle.isLocked = locked;
+  async getGaragedVehicles(garageId: number, charId: number): Promise<PlayerVehicle[]> {
+    return pvSvc.findGaraged(garageId, charId);
   }
 
-  /** Update a visual variable and persist to in-memory row (save on despawn). */
-  setVisual(dbId: number, key: string, value: unknown): void {
-    const vehicle = this.byDbId.get(dbId);
-    if (vehicle) vehicle.setVariable(key, value);
-  }
+  // ── Public API — persistence ──────────────────────────────────────────────
 
-  /** Toggle engine state shared variable. */
-  setEngine(dbId: number, on: boolean): void {
-    const vehicle = this.byDbId.get(dbId);
-    if (vehicle) vehicle.setVariable('engineOn', on);
-  }
-
-  /**
-   * Saves the live vehicle's current world position to the DB row without
-   * despawning the entity. Used on player exit and periodic checkpoints.
-   * Does NOT mark the vehicle as parked — it's still active on the map.
-   */
-  async savePosition(vehicleMp: VehicleMp): Promise<void> {
-    const dbVehicle = this.byMpId.get(vehicleMp.id);
-    if (!dbVehicle) return; // unmanaged vehicle
-
-    const pos                 = vehicleMp.position;
-    dbVehicle.parkedX         = pos.x;
-    dbVehicle.parkedY         = pos.y;
-    dbVehicle.parkedZ         = pos.z;
-    dbVehicle.parkedHeading   = vehicleMp.heading;
-    dbVehicle.parkedDimension = vehicleMp.dimension;
-
-    log.info('[VehicleManager]', `Saved position for db#${dbVehicle.id}: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`);
-    await pvSvc.save(dbVehicle);
-  }
-  /** Update dirt level shared variable (0.0 = clean, 15.0 = filthy). */
-  setDirt(dbId: number, level: number): void {
-    const clamped = Math.max(0, Math.min(15, level));
-    const vehicle = this.byDbId.get(dbId);
-    if (vehicle) vehicle.setVariable('dirt', clamped);
-
-    const dbVehicle = vehicle ? this.byMpId.get(vehicle.id) : null;
-    if (dbVehicle) dbVehicle.dirt = clamped;
-  }
-
-  /** Update engine and body health shared variables and in-memory DB row. */
-  setHealth(dbId: number, engineHealth: number, bodyHealth: number): void {
-    const vehicle = this.byDbId.get(dbId);
-    if (vehicle) {
-      vehicle.setVariable('engineHealth', engineHealth);
-      vehicle.setVariable('bodyHealth',   bodyHealth);
-    }
-    const dbVehicle = vehicle ? this.byMpId.get(vehicle.id) : null;
-    if (dbVehicle) {
-      dbVehicle.engineHealth = engineHealth;
-      dbVehicle.bodyHealth   = bodyHealth;
-    }
+  async saveAll(): Promise<void> {
+    const runtimes = [...this.byDbId.values()];
+    await Promise.all(
+      runtimes.flatMap((r) => [
+        pvSvc.save(r.dbRow),
+        r.cosmetics ? cosmeticsSvc.save(r.cosmetics) : Promise.resolve(),
+      ]),
+    );
   }
 }
 

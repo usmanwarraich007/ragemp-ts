@@ -103,4 +103,10 @@ export interface WorldInteractable {
    * Default: 0.7 m.
    */
   snapRadius?: number;
+
+  /**
+   * Override the reticle limit for this interactable.
+   * Default: 0.7 m.
+   */
+  reticleLimit?: number;
 }

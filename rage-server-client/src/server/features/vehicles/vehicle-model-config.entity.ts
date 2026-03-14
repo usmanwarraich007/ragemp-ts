@@ -44,6 +44,18 @@ export class VehicleModelConfig extends BaseEntity {
   @Column({ type: 'int', default: 100 })
   trunkVolume!: number;
 
+  /** Small in-cabin glovebox storage in litres. */
+  @Column({ type: 'int', default: 10 })
+  gloveboxCapacity!: number;
+
+  /** Base cost in $ to repair this vehicle at a mechanic. */
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 500 })
+  repairCost!: number;
+
+  /** Periodic insurance fee in $. */
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 100 })
+  insuranceCost!: number;
+
   // ── Stat bars (0-100) — displayed in dealership browse UI ─────────────────
   @Column({ type: 'int', default: 50 }) speed!:    number;
   @Column({ type: 'int', default: 50 }) accel!:    number;

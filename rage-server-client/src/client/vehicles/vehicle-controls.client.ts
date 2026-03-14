@@ -59,8 +59,8 @@ function tryToggleLock(): void {
   const player  = mp.players.local;
   const vehicle = player.vehicle;
 
-  // Allow from inside the vehicle or on foot within 2 m
-  const targetVehicle = vehicle ?? findNearestVehicle(player.position, 2.0);
+  // Allow from inside the vehicle or on foot within 2.5 m
+  const targetVehicle = vehicle ?? findNearestVehicle(player.position, 2.5);
   if (!targetVehicle) return;
 
   void clientRpc.callServer('vehicle:toggleLock', targetVehicle.remoteId).catch(() => {

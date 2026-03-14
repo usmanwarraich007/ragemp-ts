@@ -92,12 +92,14 @@ class GarageFeature {
     // Pass the zone position + heading directly into mp.vehicles.new via overrides.
     // This uses the identical code path to auto-spawn on login (which works correctly)
     // and bypasses the TypeORM RETURNING issue where save() resets parkedHeading.
-    const veh = vehicleManager.spawn(vehicle, {
+    const veh = await vehicleManager.spawn(vehicle.id, {
       x:       spawnZone.x,
       y:       spawnZone.y,
       z:       spawnZone.z,
       heading: spawnZone.heading ?? 0,
     });
+
+    if (!veh) return { ok: false, message: 'Failed to spawn vehicle.' };
 
     log.info('[Garage]', `Retrieve: veh #${vehicle.id} heading=${spawnZone.heading}`);
 
@@ -105,7 +107,7 @@ class GarageFeature {
     // entityStreamIn fires BEFORE shared variables are set on a fresh spawn
     // (race condition when the player is right next to the spawn point).
     // This event tells the client to re-read and re-apply all visual vars now.
-    player.call('vehicle:applyVisuals', [veh.id]);
+    player.call('vehicle:applyVisuals', [veh.mp.id]);
 
     log.info('[Garage]', `Player ${player.name} retrieved vehicle #${playerVehicleId} from garage #${garageId}`);
     return { ok: true };
@@ -129,7 +131,7 @@ class GarageFeature {
     const garage = await svc.findById(garageId);
     if (!garage) return { ok: false, fee: 0, message: 'Garage not found.' };
 
-    const dbVehicle = vehicleManager.getDbRow(vehMp);
+    const dbVehicle = vehicleManager.getRuntimeByMp(vehMp)?.dbRow ?? null;
     if (!dbVehicle) {
       return { ok: false, fee: 0, message: 'This vehicle cannot be parked here.' };
     }
@@ -144,9 +146,8 @@ class GarageFeature {
     // For now we notify and proceed — swap for an economy check later.
     // if (session.character!.cash < fee) return { ok: false, fee, message: 'Not enough cash.' };
 
-    // Save live state + despawn entity
-    await vehicleManager.despawn(dbVehicle.id);
-    await svc.parkVehicle(dbVehicle, garageId);
+    // Save live state, set GARAGED + garageId, and despawn entity in one operation
+    await vehicleManager.storeToGarage(dbVehicle.id, garageId);
 
     log.info('[Garage]', `Player ${player.name} parked vehicle #${dbVehicle.id} in garage #${garageId} (fee: $${fee})`);
     return { ok: true, fee };

@@ -5,7 +5,10 @@
 import './auth/auth.feature';
 import './admin/admin.feature';
 import './chat/chat.feature';
-import './vehicles/vehicle-trunk.feature';
+import './vehicles/vehicle-door.feature';
+import './vehicles/vehicle-engine.feature';
+import './vehicles/vehicle-lock.feature';
+import './vehicles/fuel.service';
 import './business/business.feature';
 import './business/business.commands';
 import './business/dealership.feature';
