@@ -13,11 +13,11 @@
           stroke-dasharray="140 251"
           stroke-linecap="round"
         />
-        <!-- Fill – maps 0–100 fuel to 0–140 arc length -->
+        <!-- Fill – maps 0–fuelCapacity to 0–140 arc length, turns red below 15% -->
         <circle
           cx="50" cy="50" r="40"
           fill="none"
-          stroke="#FFC107"
+          :stroke="fuelColour"
           stroke-width="6"
           :stroke-dasharray="`${fuelArcLength} 251`"
           stroke-linecap="round"
@@ -112,10 +112,16 @@ const speedArcLength = computed(() => {
   return pct * 350;
 });
 
-// Fuel arc: pretend 100% fuel = full 140 arc length (fuel not in store, show static 60%)
+// Fuel arc: maps current fuel % to 0–140 arc length
 const fuelArcLength = computed(() => {
-  // fuel is not in the store yet, show placeholder 60%
-  return 60;
+  const pct = Math.min(store.vehicle.fuel / Math.max(store.vehicle.fuelCapacity, 1), 1);
+  return pct * 140;
+});
+
+// Turn the gauge red below 15% fuel
+const fuelColour = computed(() => {
+  const pct = store.vehicle.fuel / Math.max(store.vehicle.fuelCapacity, 1);
+  return pct < 0.15 ? '#e74c3c' : '#FFC107';
 });
 
 const gearDisplay = computed(() => {

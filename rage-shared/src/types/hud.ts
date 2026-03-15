@@ -7,6 +7,8 @@ export interface SpeedometerData {
   locked: boolean;
   speed: number;
   maxSpeed: number;
+  fuel: number;
+  fuelCapacity: number;
 }
 
 export interface AreaData {

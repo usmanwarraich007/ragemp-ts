@@ -18,8 +18,11 @@ mp.events.add('packagesLoaded', async () => {
   await initDatabase();
   log.info('[Server]', 'Database initialized. Server ready.');
 
-  const { vehicleManager } = await import('./features/vehicles/vehicle-manager.server');
+  const { vehicleManager }  = await import('./features/vehicles/vehicle-manager.server');
+  const { startFuelTick }   = await import('./features/vehicles/fuel.service');
+
   setInterval(() => void vehicleManager.saveAll(), 5 * 60 * 1000);
+  startFuelTick();
 });
 
 mp.events.add('playerQuit', (player: PlayerMp) => {

@@ -30,6 +30,11 @@ mp.events.add('render', () => {
     const initialLocked = player.vehicle?.getVariable('locked') === true;
     state.locked = initialLocked;
     browserManager.emit('hud', 'setVehicleData', { key: 'locked', data: initialLocked });
+
+    // Send fuelCapacity once on entry — it doesn't change, so no need to track delta.
+    // Defaults to 60 if the vehicle isn't managed by our system (no variable set).
+    const capacity = (player.vehicle?.getVariable('fuelCapacity') as number | undefined) ?? 60;
+    browserManager.emit('hud', 'setVehicleData', { key: 'fuelCapacity', data: capacity });
   }
 
   // ── Exit vehicle ───────────────────────────────────────────
@@ -90,7 +95,7 @@ mp.events.add('render', () => {
 
   // ── Fuel (read from shared variable set by the server) ────────
   // Falls back to 0 if the vehicle is unmanaged (no dbId).
-  const rawFuel  = Math.round(vehicle.getVariable('fuel') as number ?? 0);
+  const rawFuel  = Math.round((vehicle.getVariable('fuel') as number | undefined) ?? 0);
   if (rawFuel !== state.fuel) {
     state.fuel = rawFuel;
     browserManager.emit('hud', 'setVehicleData', { key: 'fuel', data: rawFuel });

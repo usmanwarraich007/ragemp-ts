@@ -194,15 +194,16 @@ class DealershipFeature {
 
     // Create the owned vehicle DB record (fuel from catalog, color into cosmetics row)
     const plate  = generatePlate();
-    const dbVeh  = await vehicleManager.createVehicle(charId, itemKey, plate, colorHex || '#ffffff');
+    const dbVeh  = await vehicleManager.createVehicle(charId, itemKey, plate, colorHex || '#ffffff', colorHex || '#ffffff');
 
     // Spawn the live vehicle at the showcase position and put the player inside
     const liveVeh = await vehicleManager.spawn(dbVeh.id, spawnSlot);
     if (liveVeh) {
-      liveVeh.mp.setVariable('colorPrimary',   colorHex || '#ffffff');
-      liveVeh.mp.setVariable('colorSecondary', colorHex || '#ffffff');
       player.call('dealership:previewFreeze', [false]);
       player.putIntoVehicle(liveVeh.mp, 0); // seat 0 = driver
+      // Re-apply visuals: spawnInternal sets variables but entityStreamIn may have already
+      // fired before they were written (race condition). Same fix as garage/auth paths.
+      player.call('vehicle:applyVisuals', [liveVeh.mp.id]);
     }
 
     // Credit dealership balance

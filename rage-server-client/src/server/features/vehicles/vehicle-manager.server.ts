@@ -21,10 +21,11 @@ class VehicleManagerClass {
   ): Promise<VehicleRuntime> {
     if (this.byDbId.has(dbVehicle.id)) return this.byDbId.get(dbVehicle.id)!;
 
-    const [cosmetics, mods, keys] = await Promise.all([
+    const [cosmetics, mods, keys, config] = await Promise.all([
       cosmeticsSvc.findByVehicle(dbVehicle.id),
       modsSvc.findByVehicle(dbVehicle.id),
       keysSvc.findKeysForVehicle(dbVehicle.id),
+      configSvc.findByModel(dbVehicle.model),
     ]);
 
     const mpVeh = mp.vehicles.new(mp.joaat(dbVehicle.model), new mp.Vector3(pos.x, pos.y, pos.z), {
@@ -35,17 +36,18 @@ class VehicleManagerClass {
       locked:      dbVehicle.isLocked,
     });
 
-    mpVeh.setVariable('dbId',     dbVehicle.id);
-    mpVeh.setVariable('fuel',     dbVehicle.fuel);
-    mpVeh.setVariable('locked',   dbVehicle.isLocked);
-    mpVeh.setVariable('engineOn', false);
+    mpVeh.setVariable('dbId',          dbVehicle.id);
+    mpVeh.setVariable('fuel',          dbVehicle.fuel);
+    mpVeh.setVariable('fuelCapacity',  config?.fuelCapacity ?? 60);
+    mpVeh.setVariable('locked',        dbVehicle.isLocked);
+    mpVeh.setVariable('engineOn',      false);
 
     if (cosmetics) cosmeticsSvc.applyToVariables(cosmetics, mpVeh);
     modsSvc.applyToVariable(mods, mpVeh);
 
     dbVehicle.state = 'SPAWNED';
 
-    const runtime = new VehicleRuntime(dbVehicle, mpVeh, cosmetics!, mods, keys);
+    const runtime = new VehicleRuntime(dbVehicle, mpVeh, cosmetics!, mods, keys, config?.fuelCapacity ?? 60);
     this.byDbId.set(dbVehicle.id, runtime);
     this.byMpId.set(mpVeh.id,     runtime);
 
@@ -118,15 +120,19 @@ class VehicleManagerClass {
   // ── Public API — creation ─────────────────────────────────────────────────
 
   async createVehicle(
-    charId:   number,
-    model:    string,
-    plate:    string,
-    colorHex: string,
+    charId:          number,
+    model:           string,
+    plate:           string,
+    colorPrimaryHex: string,
+    colorSecondaryHex?: string,
   ): Promise<PlayerVehicle> {
     const config     = await configSvc.findByModel(model);
     const dbVehicle  = await pvSvc.createVehicle(charId, model, plate, config!.fuelCapacity);
     await Promise.all([
-      cosmeticsSvc.create(dbVehicle.id, { colorPrimary: colorHex }),
+      cosmeticsSvc.create(dbVehicle.id, {
+        colorPrimary:   colorPrimaryHex,
+        colorSecondary: colorSecondaryHex ?? colorPrimaryHex,
+      }),
       keysSvc.createOwnerKey(dbVehicle.id, charId),
     ]);
     return dbVehicle;
@@ -140,6 +146,11 @@ class VehicleManagerClass {
 
   getRuntimeByMp(vehicleMp: VehicleMp): VehicleRuntime | null {
     return this.byMpId.get(vehicleMp.id) ?? null;
+  }
+
+  /** Returns a snapshot of all currently live vehicle runtimes (used by fuel tick). */
+  getAllRuntimes(): VehicleRuntime[] {
+    return [...this.byDbId.values()];
   }
 
   async findVehicle(dbId: number): Promise<PlayerVehicle | null> {

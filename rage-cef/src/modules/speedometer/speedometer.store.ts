@@ -12,6 +12,8 @@ export const useSpeedometerStore = defineStore('speedometer', () => {
     engine: false,
     lights: false,
     locked: false,
+    fuel: 0,
+    fuelCapacity: 60,
   });
 
   // Listen to per-key updates from the game client

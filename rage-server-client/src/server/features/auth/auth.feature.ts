@@ -263,7 +263,14 @@ class AuthFeature {
           if (v.state !== 'SPAWNED') continue;              // only re-spawn vehicles left on the map
           if (vehicleManager.getRuntime(v.id) !== null) continue; // already live (shouldn't happen)
           if (v.parkedX === 0 && v.parkedY === 0) continue; // no saved position yet
-          vehicleManager.spawn(v.id, { x: v.parkedX, y: v.parkedY, z: v.parkedZ, heading: v.parkedHeading });
+          // Await each spawn so setVariable calls finish before the next vehicle is created.
+          // Without await the spawns overlap and entityStreamIn fires before variables are set.
+          const runtime = await vehicleManager.spawn(v.id, { x: v.parkedX, y: v.parkedY, z: v.parkedZ, heading: v.parkedHeading });
+          if (runtime) {
+            // Re-apply visuals after a short delay so GTA has fully loaded the vehicle entity.
+            // Same pattern used by garage.feature.ts to handle the stream-in race.
+            player.call('vehicle:applyVisuals', [runtime.mp.id]);
+          }
           spawned++;
         }
         if (spawned > 0) {

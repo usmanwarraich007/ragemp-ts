@@ -8,7 +8,6 @@ import './chat/chat.feature';
 import './vehicles/vehicle-door.feature';
 import './vehicles/vehicle-engine.feature';
 import './vehicles/vehicle-lock.feature';
-import './vehicles/fuel.service';
 import './business/business.feature';
 import './business/business.commands';
 import './business/dealership.feature';

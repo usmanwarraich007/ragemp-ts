@@ -1,40 +1,81 @@
+/**
+ * fuel.service.ts — Tick-based fuel drain and empty-tank enforcement.
+ *
+ * Every TICK_INTERVAL_MS the server measures how far each occupied vehicle
+ * has moved since the last tick. This is far more accurate than the old
+ * entry→exit straight-line delta, and allows enforcement mid-drive.
+ *
+ * When fuel reaches 0 the engine is killed and the driver is notified.
+ */
+
+import { log, notify } from '../../core';
 import { vehicleManager } from './vehicle-manager.server';
 import * as configSvc from './vehicle-model-config.service';
 
-const lastPos = new Map<number, { x: number; y: number; z: number }>();
+/** How often (ms) fuel is recalculated. 5 s is accurate enough at any road speed. */
+const TICK_INTERVAL_MS = 5_000;
 
-mp.events.add('playerEnterVehicle', (_player: PlayerMp, vehicle: VehicleMp) => {
-  const dbId = vehicle.getVariable('dbId') as number | undefined;
-  if (!dbId) return;
-  const pos = vehicle.position;
-  lastPos.set(dbId, { x: pos.x, y: pos.y, z: pos.z });
-});
+// ── Fuel tick ─────────────────────────────────────────────────────────────────
 
-mp.events.add('playerExitVehicle', async (_player: PlayerMp, vehicle: VehicleMp) => {
-  const dbId = vehicle.getVariable('dbId') as number | undefined;
-  if (!dbId) return;
+export function startFuelTick(): void {
+  setInterval(() => void fuelTick(), TICK_INTERVAL_MS);
+  log.info('[Fuel]', `Fuel tick started (interval: ${TICK_INTERVAL_MS / 1000}s)`);
+}
 
-  const prev = lastPos.get(dbId);
-  lastPos.delete(dbId);
-  if (!prev) return;
+async function fuelTick(): Promise<void> {
+  // Snapshot all runtimes — avoid mutating the map while iterating
+  const runtimes = vehicleManager.getAllRuntimes();
 
-  const runtime = vehicleManager.getRuntime(dbId);
-  if (!runtime) return;
+  for (const runtime of runtimes) {
+    // Skip engines that are off — no fuel consumed while parked
+    const engineOn = runtime.mp.getVariable('engineOn') as boolean | undefined;
+    if (!engineOn) {
+      runtime.lastTickPos = null;
+      continue;
+    }
 
-  const cur  = vehicle.position;
-  const dx   = cur.x - prev.x;
-  const dy   = cur.y - prev.y;
-  const dz   = cur.z - prev.z;
-  const km   = Math.sqrt(dx * dx + dy * dy + dz * dz) / 1000;
+    const pos = runtime.mp.position;
 
-  const config = await configSvc.findByModel(runtime.model);
-  if (!config) return;
+    // First tick after engine start — seed the position, don't drain yet
+    if (!runtime.lastTickPos) {
+      runtime.lastTickPos = { x: pos.x, y: pos.y, z: pos.z };
+      continue;
+    }
 
-  // Re-check the runtime is still alive — it may have been despawned (parked/stored)
-  // while we were awaiting the config query. setFuel touches mp.setVariable which
-  // throws "Expired multiplayer object" on a destroyed entity.
-  if (!vehicleManager.getRuntime(dbId)) return;
+    // Distance driven since last tick (metres → km)
+    const dx = pos.x - runtime.lastTickPos.x;
+    const dy = pos.y - runtime.lastTickPos.y;
+    const dz = pos.z - runtime.lastTickPos.z;
+    const km = Math.sqrt(dx * dx + dy * dy + dz * dz) / 1000;
+    runtime.lastTickPos = { x: pos.x, y: pos.y, z: pos.z };
 
-  runtime.setFuel(runtime.dbRow.fuel - km * config.fuelConsume);
-  runtime.dbRow.odometer += km;
-});
+    if (km === 0) continue; // vehicle hasn't moved — idle, no drain
+
+    // Fuel consumption and odometer
+    const config = await configSvc.findByModel(runtime.model);
+    if (!config) continue;
+
+    // Re-check runtime is still alive after the async config query
+    if (!vehicleManager.getRuntime(runtime.id)) continue;
+
+    runtime.dbRow.odometer += km;
+    const newFuel = runtime.dbRow.fuel - km * config.fuelConsume;
+    runtime.setFuel(newFuel);
+
+    // ── Empty tank enforcement ────────────────────────────────────────────────
+    if (runtime.dbRow.fuel <= 0) {
+      // Find the driver (seat index 0)
+      const driver = mp.players.toArray().find(
+        (p) => p.vehicle?.id === runtime.mp.id && p.seat === 0,
+      ) ?? undefined;
+
+      // Notify driver via the server-side toast system before killing the engine
+      if (driver) notify(driver).screen.error('Out of fuel! Find a gas station to refuel.');
+
+      runtime.setEngine(false, driver);
+      runtime.lastTickPos = null; // reset so we don't drain again next tick
+
+      log.info('[Fuel]', `Vehicle db#${runtime.id} ran out of fuel.`);
+    }
+  }
+}

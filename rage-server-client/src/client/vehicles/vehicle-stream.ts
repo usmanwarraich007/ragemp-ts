@@ -19,65 +19,57 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 
-// ── Stream-in handler ─────────────────────────────────────────────────────────
+// ── Core visual applicator ────────────────────────────────────────────────────
+//
+// Single source of truth for reading server-set shared variables and applying
+// them via client-side natives. Called from both entityStreamIn and
+// vehicle:applyVisuals so there is no duplicated logic between the two paths.
 
-mp.events.add('entityStreamIn', (entity: EntityMp) => {
-  if (entity.type !== 'vehicle') return;
-  const vehicle = entity as VehicleMp;
-
-  // Only process vehicles managed by our system (have a dbId variable)
-  const dbId = vehicle.getVariable('dbId') as number | undefined;
-  if (!dbId) return;
-
-  // ── Door breakability guard (from reference) ──────────────────────────────
-  // On stream-in GTA's physics can cause doors to pop off. Mark them unbreakable
-  // for 1.5 s while the vehicle settles, then restore normal breakability.
-  for (let i = 0; i < 8; i++) vehicle.setDoorBreakable(i, false);
-  setTimeout(() => {
-    if (mp.vehicles.exists(vehicle)) {
-      for (let i = 0; i < 8; i++) vehicle.setDoorBreakable(i, true);
-    }
-  }, 1500);
+function applyVehicleVisuals(vehicle: VehicleMp): void {
   // ── Custom RGB colors ─────────────────────────────────────────────────────
   const primaryHex   = vehicle.getVariable('colorPrimary')   as string | undefined;
   const secondaryHex = vehicle.getVariable('colorSecondary') as string | undefined;
-
-  if (primaryHex) {
-    const [r, g, b] = hexToRgb(primaryHex);
-    vehicle.setCustomPrimaryColour(r, g, b);
-  }
-  if (secondaryHex) {
-    const [r, g, b] = hexToRgb(secondaryHex);
-    vehicle.setCustomSecondaryColour(r, g, b);
-  }
+  if (primaryHex)   { const [r, g, b] = hexToRgb(primaryHex);   vehicle.setCustomPrimaryColour(r, g, b); }
+  if (secondaryHex) { const [r, g, b] = hexToRgb(secondaryHex); vehicle.setCustomSecondaryColour(r, g, b); }
 
   // ── Pearlescent + wheel color ─────────────────────────────────────────────
-  const pearl = vehicle.getVariable('colorPearl') as number | undefined;
-  if (pearl !== undefined && pearl > 0) {
-    // setExtraColours(pearlescentColor, wheelColor) — pass 0 for wheel to leave default
-    vehicle.setExtraColours(pearl, 0);
+  const pearl      = vehicle.getVariable('colorPearl')  as number | undefined;
+  const wheelColor = vehicle.getVariable('wheelColor')  as number | undefined;
+  // setExtraColours(pearlescentColor, wheelColor) — both persist on the vehicle
+  if (pearl !== undefined || wheelColor !== undefined) {
+    vehicle.setExtraColours(pearl ?? 0, wheelColor ?? 0);
   }
 
   // ── Wheel type ────────────────────────────────────────────────────────────
   const wheelType = vehicle.getVariable('wheelType') as number | undefined;
-  if (wheelType !== undefined && wheelType > 0) {
-    vehicle.setWheelType(wheelType);
-  }
+  if (wheelType !== undefined && wheelType > 0) vehicle.setWheelType(wheelType);
 
   // ── Window tint ───────────────────────────────────────────────────────────
   const windowTint = vehicle.getVariable('windowTint') as number | undefined;
-  if (windowTint !== undefined && windowTint > 0) {
-    vehicle.setWindowTint(windowTint);
-  }
+  if (windowTint !== undefined && windowTint > 0) vehicle.setWindowTint(windowTint);
+
+  // ── Livery ────────────────────────────────────────────────────────────────
+  const livery = vehicle.getVariable('livery') as number | undefined;
+  if (livery !== undefined && livery >= 0) vehicle.setLivery(livery);
 
   // ── Neon ──────────────────────────────────────────────────────────────────
+  // Server stores neon as separate R/G/B integers (neonColorR/G/B), not a hex string.
   const neonEnabled = vehicle.getVariable('neonEnabled') as boolean | undefined;
   if (neonEnabled) {
-    const neonHex = vehicle.getVariable('neonColor') as string | undefined;
-    const [r, g, b] = hexToRgb(neonHex ?? '#ff00ff');
+    const r = (vehicle.getVariable('neonColorR') as number | undefined) ?? 255;
+    const g = (vehicle.getVariable('neonColorG') as number | undefined) ?? 0;
+    const b = (vehicle.getVariable('neonColorB') as number | undefined) ?? 255;
     vehicle.setNeonLightsColour(r, g, b);
     // Enable all 4 neon positions: 0=left, 1=right, 2=front, 3=back
     for (let i = 0; i < 4; i++) vehicle.setNeonLightEnabled(i, true);
+  }
+
+  // ── Xenon headlights ──────────────────────────────────────────────────────
+  // Xenon headlights are mod type 22 in GTA (a boolean toggle mod).
+  // xenonColor > 0 means xenon is enabled in the DB.
+  const xenonColor = vehicle.getVariable('xenonColor') as number | undefined;
+  if (xenonColor !== undefined && xenonColor > 0) {
+    vehicle.toggleMod(22, true); // modType 22 = xenon headlights
   }
 
   // ── Mods ──────────────────────────────────────────────────────────────────
@@ -94,14 +86,6 @@ mp.events.add('entityStreamIn', (entity: EntityMp) => {
     }
   }
 
-  // ── Engine state (default OFF — must be started manually) ────────────────
-  // If the variable is explicitly true the engine was already running; otherwise off.
-  const engineOn = vehicle.getVariable('engineOn') as boolean | undefined;
-  const isOn = engineOn === true;
-  vehicle.setEngineOn(isOn, true, false);
-  vehicle.setUndriveable(!isOn); // match reference: undriveable when engine off
-  vehicle.setLights(!isOn ? 1 : 0);
-
   // ── Dirt level (0.0 = clean → 15.0 = filthy) ─────────────────────────────
   const dirt = vehicle.getVariable('dirt') as number | undefined;
   if (dirt !== undefined && dirt > 0) vehicle.setDirtLevel(dirt);
@@ -111,9 +95,39 @@ mp.events.add('entityStreamIn', (entity: EntityMp) => {
   const bodyHealth   = vehicle.getVariable('bodyHealth')   as number | undefined;
   if (engineHealth !== undefined) vehicle.setEngineHealth(engineHealth);
   if (bodyHealth   !== undefined) vehicle.setBodyHealth(bodyHealth);
+}
+
+// ── Stream-in handler ─────────────────────────────────────────────────────────
+
+mp.events.add('entityStreamIn', (entity: EntityMp) => {
+  if (entity.type !== 'vehicle') return;
+  const vehicle = entity as VehicleMp;
+
+  // Only process vehicles managed by our system (have a dbId variable)
+  const dbId = vehicle.getVariable('dbId') as number | undefined;
+  if (!dbId) return;
+
+  // ── Door breakability guard ───────────────────────────────────────────────
+  // On stream-in GTA's physics can cause doors to pop off. Mark them unbreakable
+  // for 1.5 s while the vehicle settles, then restore normal breakability.
+  for (let i = 0; i < 8; i++) vehicle.setDoorBreakable(i, false);
+  setTimeout(() => {
+    if (mp.vehicles.exists(vehicle)) {
+      for (let i = 0; i < 8; i++) vehicle.setDoorBreakable(i, true);
+    }
+  }, 1500);
+
+  // ── Engine state (default OFF — must be started manually) ─────────────────
+  const engineOn = vehicle.getVariable('engineOn') as boolean | undefined;
+  const isOn = engineOn === true;
+  vehicle.setEngineOn(isOn, true, false);
+  vehicle.setUndriveable(!isOn);
+  vehicle.setLights(!isOn ? 1 : 0);
+
+  applyVehicleVisuals(vehicle);
 });
 
-// ── Explicit re-apply (server calls this after retrieve to fix stream-in race) ──
+// ── Explicit re-apply (server calls this after spawn to fix stream-in race) ───
 // When a vehicle is spawned close to the player, entityStreamIn fires BEFORE
 // the server has finished setting shared variables, so mods/colors are missing.
 // The server sends this event right after spawn to force a re-apply.
@@ -126,47 +140,19 @@ mp.events.add('vehicle:applyVisuals', (remoteId: number) => {
     const dbId = vehicle.getVariable('dbId') as number | undefined;
     if (!dbId) return; // not a managed vehicle
 
-    // Colors
-    const primaryHex   = vehicle.getVariable('colorPrimary')   as string | undefined;
-    const secondaryHex = vehicle.getVariable('colorSecondary') as string | undefined;
-    if (primaryHex)   { const [r,g,b] = hexToRgb(primaryHex);   vehicle.setCustomPrimaryColour(r,g,b); }
-    if (secondaryHex) { const [r,g,b] = hexToRgb(secondaryHex); vehicle.setCustomSecondaryColour(r,g,b); }
-
-    const pearl    = vehicle.getVariable('colorPearl')  as number | undefined;
-    const wheelType = vehicle.getVariable('wheelType')  as number | undefined;
-    const windowTint = vehicle.getVariable('windowTint') as number | undefined;
-    if (pearl    !== undefined && pearl    > 0) vehicle.setExtraColours(pearl, 0);
-    if (wheelType !== undefined && wheelType > 0) vehicle.setWheelType(wheelType);
-    if (windowTint !== undefined && windowTint > 0) vehicle.setWindowTint(windowTint);
-
-    // Neon
-    const neonEnabled = vehicle.getVariable('neonEnabled') as boolean | undefined;
-    if (neonEnabled) {
-      const [r,g,b] = hexToRgb(vehicle.getVariable('neonColor') as string ?? '#ff00ff');
-      vehicle.setNeonLightsColour(r,g,b);
-      for (let i = 0; i < 4; i++) vehicle.setNeonLightEnabled(i, true);
-    }
-
-    // Mods — must call setModKit(0) first
-    const modsRaw = vehicle.getVariable('mods') as string | undefined;
-    if (modsRaw && modsRaw !== '{}') {
-      try {
-        const mods = JSON.parse(modsRaw) as Record<string, number>;
-        vehicle.setModKit(0);
-        for (const [typeStr, index] of Object.entries(mods)) {
-          vehicle.setMod(Number(typeStr), index);
-        }
-      } catch { /* malformed mods JSON */ }
-    }
-
-    // Dirt + Health
-    const dirt         = vehicle.getVariable('dirt')         as number | undefined;
-    const engineHealth = vehicle.getVariable('engineHealth') as number | undefined;
-    const bodyHealth   = vehicle.getVariable('bodyHealth')   as number | undefined;
-    if (dirt         !== undefined && dirt > 0) vehicle.setDirtLevel(dirt);
-    if (engineHealth !== undefined) vehicle.setEngineHealth(engineHealth);
-    if (bodyHealth   !== undefined) vehicle.setBodyHealth(bodyHealth);
+    applyVehicleVisuals(vehicle);
   }, 300); // 300 ms — enough for the vehicle to be fully initialized
+});
+
+// ── Engine killed (out of fuel) ───────────────────────────────────────────────
+// Server sends this when the fuel tick drains the tank to 0 while engine is on.
+// The server already shows the toast — we only apply the GTA native state here.
+mp.events.add('vehicle:engineKilled', () => {
+  const vehicle = mp.players.local.vehicle;
+  if (!vehicle) return;
+  vehicle.setEngineOn(false, true, false);
+  vehicle.setUndriveable(true);
+  vehicle.setLights(1);
 });
 
 // ── Door state sync ───────────────────────────────────────────────────────────

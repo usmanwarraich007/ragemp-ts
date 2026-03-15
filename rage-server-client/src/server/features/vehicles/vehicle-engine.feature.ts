@@ -1,5 +1,6 @@
 import { Rpc, notify, log, playerStore } from '../../core';
 import { vehicleManager } from './vehicle-manager.server';
+import * as pvSvc from './player-vehicle.service';
 
 class VehicleEngineFeature {
   @Rpc('vehicle:setEngine')
@@ -25,8 +26,21 @@ class VehicleEngineFeature {
       return { ok: false };
     }
 
+    // ── Fuel guard — prevent starting engine on an empty tank ─────────────────
+    if (on && runtime && runtime.dbRow.fuel <= 0) {
+      notify(player).screen.error('Out of fuel. Find a gas station to refuel.');
+      return { ok: false };
+    }
+
     if (runtime) {
       runtime.setEngine(on);
+      // Seed lastTickPos so the first fuel tick has a valid origin
+      if (on) {
+        const pos = vehicle.position;
+        runtime.lastTickPos = { x: pos.x, y: pos.y, z: pos.z };
+      } else {
+        runtime.lastTickPos = null;
+      }
     } else {
       vehicle.setVariable('engineOn', on);
     }
@@ -36,6 +50,8 @@ class VehicleEngineFeature {
   }
 }
 
+// ── Position save on exit ─────────────────────────────────────────────────────
+// Note: fuel.service.ts owns fuel drain. This handler owns position persistence only.
 mp.events.add('playerExitVehicle', (player: PlayerMp, vehicle: VehicleMp) => {
   const dbId    = vehicle.getVariable('dbId') as number | undefined;
   const runtime = dbId ? vehicleManager.getRuntime(dbId) : null;
@@ -45,7 +61,5 @@ mp.events.add('playerExitVehicle', (player: PlayerMp, vehicle: VehicleMp) => {
     log.error('[VehicleEngine]', `Failed to save position for veh db#${dbId}`, err),
   );
 });
-
-import * as pvSvc from './player-vehicle.service';
 
 void VehicleEngineFeature;
